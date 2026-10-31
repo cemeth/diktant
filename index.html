@@ -212,6 +212,7 @@ body{
       <div class="under">
         <button class="pill" id="btnPrev">‹ 上一句</button>
         <button class="pill" id="btnSeq">▶ 连读</button>
+        <button class="pill" id="btnOnce">⏵ 一次读完</button>
         <button class="pill" id="btnLoop">🔁 循环</button>
         <button class="pill" id="btnNextInline">下一句 ›</button>
       </div>
@@ -219,7 +220,7 @@ body{
         <span class="slabel">语速</span>
         <div class="chips" id="speedChips"></div>
       </div>
-      <div class="hint readhint" id="readHint">播放键 = 读 <b class="link" id="twiceToggle">2 遍</b>（第二遍慢一点）· 连读 = 每句读一遍，间隔 2 秒 · 循环 = 反复听这一篇</div>
+      <div class="hint readhint" id="readHint">播放键 = 读 <b class="link" id="twiceToggle">2 遍</b>（第二遍慢一点）· 连读 = 每句读完停 2 秒 · 一次读完 = 不停顿读完整篇 · 循环 = 反复听这一篇</div>
     </div>
     <div class="dots" id="dots"></div>
     <div class="typebox">
@@ -577,7 +578,10 @@ function ttsVoice() {
 }
 function speak(text, rate, done, fail) {
   if (!ttsAvailable()) { if (fail) fail(); return; }
-  try { window.speechSynthesis.cancel(); } catch (e) {}
+  /* 只在真的还在读时才打断：这样连读/一次读完是自然的「接着读」，iOS 上不会丢句 */
+  try {
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) window.speechSynthesis.cancel();
+  } catch (e) {}
   var u = new SpeechSynthesisUtterance(text);
   u.lang = 'ru-RU';
   var v = ttsVoice();
@@ -604,17 +608,24 @@ function playOne(t, idx, rate, done, fail) {
   if (hasAudio(t)) { playSrc(t, idx, rate, done, fail); return; }
   speak(t.sentences[idx].ru, rate, done, fail);
 }
-/* 连读状态 */
-var seq = { on: false, loop: false, timer: null, token: 0 };
+/* 整篇播放状态：mode = '' | 'seq'（每句停 2 秒）| 'loop'（反复听）| 'once'（一口气读完） */
+var seq = { on: false, mode: '', timer: null, token: 0 };
 function updateSeqBtn() {
-  var b = $('btnSeq'), l = $('btnLoop');
+  var b = $('btnSeq'), l = $('btnLoop'), o = $('btnOnce');
+  var isSeq = seq.on && seq.mode === 'seq';
+  var isLoop = seq.on && seq.mode === 'loop';
+  var isOnce = seq.on && seq.mode === 'once';
   if (b) {
-    b.classList.toggle('on', seq.on && !seq.loop);
-    b.textContent = (seq.on && !seq.loop) ? '❚❚ 停止连读' : '▶ 连读';
+    b.classList.toggle('on', isSeq);
+    b.textContent = isSeq ? '❚❚ 停止连读' : '▶ 连读';
   }
   if (l) {
-    l.classList.toggle('on', seq.on && seq.loop);
-    l.textContent = (seq.on && seq.loop) ? '❚❚ 停止循环' : '🔁 循环';
+    l.classList.toggle('on', isLoop);
+    l.textContent = isLoop ? '❚❚ 停止循环' : '🔁 循环';
+  }
+  if (o) {
+    o.classList.toggle('on', isOnce);
+    o.textContent = isOnce ? '❚❚ 停止' : '⏵ 一次读完';
   }
 }
 function markSeqDot(n) {
@@ -627,7 +638,7 @@ function markSeqDot(n) {
 }
 function stopSeq() {
   seq.on = false;
-  seq.loop = false;
+  seq.mode = '';
   seq.token++;
   if (seq.timer) { clearTimeout(seq.timer); seq.timer = null; }
   var a = audioEl();
@@ -763,24 +774,26 @@ function toggleTwice() {
   save();
   renderTwice();
 }
-/* 整篇连读（loop=true 时反复听）：一句一句自动播，每句之间停 2 秒 */
-function startSeq(loop) {
+/* 整篇播放：mode='seq' 每句停 2 秒；'loop' 反复听；'once' 一口气读完 */
+function startSeq(mode) {
+  mode = mode || 'seq';
   var t = curText();
   if (!t) return;
   if (seq.on) { stopSeq(); return; }
-  if (loop && !hasAudio(t) && !ttsAvailable()) {
+  if (!hasAudio(t) && !ttsAvailable()) {
     $('readHint').textContent = '这个浏览器没有可用的语音朗读，换 Safari 试试。';
     return;
   }
   seq.on = true;
-  seq.loop = !!loop;
+  seq.mode = mode;
+  var gap = (mode === 'once') ? 0 : 2000;
   var my = ++seq.token;
   updateSeqBtn();
   var i = 0;
   function step() {
     if (!seq.on || my !== seq.token) return;
     if (i >= t.sentences.length) {
-      if (seq.loop) {
+      if (mode === 'loop') {
         i = 0;
         seq.timer = setTimeout(function () { seq.timer = null; step(); }, 2000);
         return;
@@ -792,7 +805,7 @@ function startSeq(loop) {
     $('btnPlay').textContent = '❚❚';
     playOne(t, i, state.speed || 1, function () {
       if (!seq.on || my !== seq.token) return;
-      seq.timer = setTimeout(function () { seq.timer = null; i++; step(); }, 2000);
+      seq.timer = setTimeout(function () { seq.timer = null; i++; step(); }, gap);
     }, function () {
       /* 被浏览器拦了（例如锁屏/自动播放限制）就停下，让用户点一下再试 */
       if (my === seq.token) stopSeq();
@@ -923,8 +936,9 @@ $('btnPlay').onclick = function () {
   if (isSpeaking()) { stopSeq(); return; }
   playCurrent();
 };
-$('btnSeq').onclick = function () { startSeq(false); };
-$('btnLoop').onclick = function () { startSeq(true); };
+$('btnSeq').onclick = function () { startSeq('seq'); };
+$('btnOnce').onclick = function () { startSeq('once'); };
+$('btnLoop').onclick = function () { startSeq('loop'); };
 $('btnAdd').onclick = function () { openAdd(); };
 $('btnAddBack').onclick = function () { show('home'); };
 $('btnAddCancel').onclick = function () { show('home'); };
