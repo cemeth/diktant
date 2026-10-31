@@ -229,6 +229,18 @@ body{
   font-size:12.5px;font-weight:700;margin-right:7px;font-family:inherit;cursor:pointer}
 .wdex .replay{margin-top:12px;width:100%;border:1px solid var(--line);background:#fff;border-radius:12px;
   padding:11px;font-size:14px;font-weight:700;color:var(--blue-d);font-family:inherit;cursor:pointer}
+
+/* ---------- 今日推荐 ---------- */
+.daily{position:relative}
+.daily .hit{margin-top:8px;font-size:13px;color:var(--ink-2);line-height:1.5}
+.daily .hit b{color:#0f766e;font-weight:700}
+.daily .wlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.daily .wlist i{font-style:normal;background:var(--blue-l);color:var(--blue-d);border-radius:999px;
+  padding:3px 9px;font-size:12.5px;font-weight:600}
+.daily .acts{display:flex;gap:8px;margin-top:11px}
+.daily .acts .entry{flex:1 1 0}
+.daily .acts .more{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:12px;
+  padding:9px 12px;font-size:13px;font-weight:700;color:var(--ink-2);font-family:inherit;cursor:pointer}
 </style>
 </head>
 <body>
@@ -240,6 +252,10 @@ body{
       <h1>俄语听写</h1>
       <div class="ru">Слушай и пиши</div>
       <p>听一句，写一句。按生活场景练，也可以按 A1–B2 分级练（含 A1+ / A2+ 过渡篇），写完再看原文，慢慢把耳朵练出来。</p>
+    </div>
+    <div class="mine-sec">
+      <h2>今日推荐 <span class="cnt" id="dailyCnt"></span></h2>
+      <div class="card daily" id="dailyCard"></div>
     </div>
     <div class="mine-sec">
       <h2>我的短文 <span class="cnt" id="customCnt"></span></h2>
@@ -429,6 +445,7 @@ function saveCustom() {
 function load() {
   state.custom = loadCustom();
   loadWords();
+  loadDailyOffset();
   try {
     var raw = localStorage.getItem(STORE);
     if (!raw) return;
@@ -575,7 +592,9 @@ function saveWordsFromInput() {
   if (!list.length) { $('wordsFoot').textContent = '没读到俄语单词，看看是不是粘错了。'; return; }
   state.words = list;
   saveWordsStore();
-  renderWords();
+  dailyOffset = 0;
+  saveDailyOffset();
+  renderHome();
   show('home');
 }
 function shuffleList(a) {
@@ -756,6 +775,89 @@ function wdDone() {
   $('btnWDReveal').textContent = '返回首页';
 }
 
+/* ---- 今日推荐：按日期轮换，优先挑含你单词最多的那篇（真人录音，离线可用） ---- */
+var dailyOffset = 0;
+function dailyHash() {
+  var d = new Date();
+  return d.getFullYear() * 372 + (d.getMonth() + 1) * 31 + d.getDate();
+}
+function loadDailyOffset() {
+  dailyOffset = 0;
+  try {
+    var o = JSON.parse(localStorage.getItem('diktant.daily.v1') || '{}');
+    if (o && o.h === dailyHash() && typeof o.off === 'number' && o.off >= 0) dailyOffset = o.off;
+  } catch (e) {}
+}
+function saveDailyOffset() {
+  try { localStorage.setItem('diktant.daily.v1', JSON.stringify({ h: dailyHash(), off: dailyOffset })); } catch (e) {}
+}
+function allTextItems() {
+  var out = [];
+  for (var i = 0; i < CONTENT.chapters.length; i++) {
+    var ch = CONTENT.chapters[i];
+    for (var j = 0; j < ch.scenes.length; j++) {
+      var ts = ch.scenes[j].texts || [];
+      for (var k = 0; k < ts.length; k++) out.push({ ch: ch, sc: ch.scenes[j], t: ts[k] });
+    }
+  }
+  return out;
+}
+function textMatchedWords(t) {
+  var out = [];
+  if (!state.words.length) return out;
+  var txt = '', i;
+  for (i = 0; i < t.sentences.length; i++) txt += ' ' + t.sentences[i].ru;
+  txt = txt.toLowerCase().replace(/ё/g, 'е').replace(/[\u0301]/g, '');
+  for (i = 0; i < state.words.length; i++) {
+    var k = normWord(state.words[i].ru);
+    if (k.length < 3) continue;
+    if (new RegExp('(^|[^а-я])' + k + '[а-я]*(?=$|[^а-я])').test(txt)) out.push(state.words[i].ru);
+  }
+  return out;
+}
+function renderDaily() {
+  var box = $('dailyCard');
+  if (!box) return;
+  box.innerHTML = '';
+  var all = allTextItems();
+  if (!all.length) { $('dailyCnt').textContent = ''; return; }
+  var scored = [], i;
+  for (i = 0; i < all.length; i++) {
+    scored.push({ sc: all[i].sc, t: all[i].t, hit: textMatchedWords(all[i].t) });
+  }
+  scored.sort(function (a, b) {
+    if (b.hit.length !== a.hit.length) return b.hit.length - a.hit.length;
+    return a.t.id < b.t.id ? -1 : (a.t.id > b.t.id ? 1 : 0);
+  });
+  var pool = scored.slice(0, state.words.length ? Math.min(10, scored.length) : scored.length);
+  var pick = pool[(dailyHash() + dailyOffset) % pool.length];
+  var kind = pick.t.kind === 'dialog' ? '对话' : '短文';
+  box.innerHTML =
+    '<h3>' + esc(pick.sc.titleZh) + ' <span class="lvl">' + esc(pick.sc.level || '') + '</span></h3>' +
+    '<div class="rt">' + esc(pick.sc.title) + '</div>' +
+    '<div class="meta"><span>' + kind + ' · ' + pick.t.sentences.length + ' 句 · 约 ' + estSeconds(pick.t) + ' 秒</span></div>' +
+    (pick.hit.length
+      ? '<div class="hit">这段里有你今天 <b>' + pick.hit.length + '</b> 个词：</div>' +
+        '<div class="wlist">' + pick.hit.slice(0, 10).map(function (w) { return '<i>' + esc(w) + '</i>'; }).join('') + '</div>'
+      : '<div class="hit">' + (state.words.length
+        ? '今天的词还没在这篇里出现，点「换一段」试试别的。'
+        : '先去「我的单词」加上今天的词，这里就会按你的词推荐。') + '</div>');
+  var acts = document.createElement('div');
+  acts.className = 'acts';
+  var go = document.createElement('button');
+  go.className = 'entry' + (pick.t.kind === 'dialog' ? ' dlg' : '');
+  go.textContent = '开始听写';
+  go.onclick = function () { openText(pick.t.id); };
+  var more = document.createElement('button');
+  more.className = 'more';
+  more.textContent = '换一段';
+  more.onclick = function () { dailyOffset++; saveDailyOffset(); renderDaily(); };
+  acts.appendChild(go);
+  acts.appendChild(more);
+  box.appendChild(acts);
+  $('dailyCnt').textContent = state.words.length ? '（按你的 ' + state.words.length + ' 个词挑）' : '';
+}
+
 /* ---- 编一段对话：用你的词套常用句型，双人交替（离线，不联网） ---- */
 var DLG_FRAMES = {
   n: [
@@ -893,6 +995,7 @@ function renderHome() {
   }
   renderCustom();
   renderWords();
+  renderDaily();
 }
 /* 分级短文：按 A1 / A1+ / A2 / A2+ / B1 / B2 分块排列 */
 function renderLevelGroups(list, ch) {
