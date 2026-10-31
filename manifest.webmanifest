@@ -1,7 +1,7 @@
 {
   "name": "俄语听写 · Слушай и пиши",
   "short_name": "俄语听写",
-  "description": "按场景分类的逐句听写短文：6 类 48 个场景 292 句，语音离线可用",
+  "description": "按场景分类的逐句听写：6 类 48 个场景（48 篇短文 + 48 篇对话）共 772 句，语音离线可用",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
