@@ -36,10 +36,10 @@ body{
 .hero h1{margin:0;font-size:26px;letter-spacing:-.4px}
 .hero .ru{color:var(--blue);font-size:14px;letter-spacing:.3px;margin-top:4px}
 .hero p{margin:10px 0 0;color:var(--ink-2);font-size:14px}
-.tabs{display:flex;gap:8px;margin:18px 0 4px;overflow-x:auto;padding-bottom:2px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 4px}
 .tab{
   flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink-2);
-  padding:9px 16px;border-radius:999px;font-size:15px;font-weight:600;cursor:pointer;
+  padding:8px 13px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;
 }
 .tab.on{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 4px 12px -4px rgba(37,99,235,.5)}
 .leveldesc{color:var(--ink-3);font-size:13px;margin:8px 2px 14px}
@@ -174,7 +174,8 @@ body{
 .foot{text-align:center;color:var(--ink-3);font-size:12px;padding:22px 0 10px}
 
 /* ---------- 分级短文的等级分组 ---------- */
-.lvjump{display:flex;gap:6px;overflow-x:auto;padding:2px 0 12px;-webkit-overflow-scrolling:touch}
+.lvjump{display:flex;gap:6px;overflow-x:auto;padding:8px 0 10px;-webkit-overflow-scrolling:touch;
+  position:sticky;top:0;z-index:6;background:var(--bg);margin:0 0 2px}
 .lvjump::-webkit-scrollbar{display:none}
 .lvjump button{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:999px;
   padding:6px 11px;font-size:12.5px;font-weight:700;color:var(--blue-d);cursor:pointer;font-family:inherit}
@@ -304,7 +305,7 @@ var CONTENT = {"version":6,"kind":"scene-texts","chapters":[{"id":"c1","name":"�
 var STORE = 'diktant.v2';
 var CUSTOM_KEY = 'diktant.custom.v1';
 var SPEEDS = [0.6, 0.75, 0.9, 1, 1.25, 1.5];
-var state = { ch: 'c1', textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {}, custom: [] };
+var state = { ch: 'c7', textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {}, custom: [] };
 
 function loadCustom() {
   try {
@@ -331,7 +332,7 @@ function load() {
     if (!raw) return;
     var s = JSON.parse(raw);
     if (s && typeof s === 'object') {
-      if (s.ch) state.ch = s.ch;
+      if (s.ch && s.ui2) state.ch = s.ch;
       if (s.typed) state.typed = s.typed;
       if (s.seen) state.seen = s.seen;
       if (s.done) state.done = s.done;
@@ -345,7 +346,7 @@ function save() {
   try {
     localStorage.setItem(STORE, JSON.stringify({
       ch: state.ch, speed: state.speed, twice: state.twice, typed: state.typed, seen: state.seen, done: state.done,
-      pos: state.lastPos || {}
+      pos: state.lastPos || {}, ui2: 1
     }));
   } catch (e) {}
 }
@@ -360,6 +361,13 @@ function show(screen) {
 function curChapter() {
   for (var i = 0; i < CONTENT.chapters.length; i++) if (CONTENT.chapters[i].id === state.ch) return CONTENT.chapters[i];
   return CONTENT.chapters[0];
+}
+/* 首页标签顺序：分级短文（按等级分类）排在最前，其余生活场景按章顺序跟在后面 */
+function chapterOrder() {
+  var out = [], i;
+  for (i = 0; i < CONTENT.chapters.length; i++) if (CONTENT.chapters[i].id === 'c7') out.push(CONTENT.chapters[i]);
+  for (i = 0; i < CONTENT.chapters.length; i++) if (CONTENT.chapters[i].id !== 'c7') out.push(CONTENT.chapters[i]);
+  return out;
 }
 function itemOf(id) {
   for (var i = 0; i < CONTENT.chapters.length; i++) {
@@ -423,15 +431,16 @@ function makeSceneCard(sc) {
 }
 function renderHome() {
   var tabs = $('tabs'), i;
+  var order = chapterOrder();
   tabs.innerHTML = '';
-  for (i = 0; i < CONTENT.chapters.length; i++) {
+  for (i = 0; i < order.length; i++) {
     (function (ch) {
       var b = document.createElement('button');
       b.className = 'tab' + (ch.id === state.ch ? ' on' : '');
       b.textContent = ch.name;
       b.onclick = function () { state.ch = ch.id; save(); renderHome(); };
       tabs.appendChild(b);
-    })(CONTENT.chapters[i]);
+    })(order[i]);
   }
   var ch = curChapter();
   $('leveldesc').textContent = ch.desc;
