@@ -65,6 +65,27 @@ body{
 .entry:active{transform:scale(.99)}
 .who{color:#0f766e;font-weight:700;margin-right:2px}
 
+/* ---------- 我的短文 ---------- */
+.mine-sec{margin:20px 0 4px}
+.mine-sec h2{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:8px}
+.mine-sec .cnt{color:var(--ink-3);font-weight:400;font-size:13px}
+.addcard{
+  width:100%;border:1.5px dashed #c3d0e2;background:#fff;border-radius:var(--radius);
+  padding:14px;font-size:14.5px;font-weight:600;color:var(--blue-d);cursor:pointer;margin-bottom:12px;
+  font-family:inherit;text-align:left;
+}
+.addcard:active{transform:scale(.99)}
+.card .row{display:flex;gap:8px;margin-top:10px;align-items:center}
+.card .row .entry{flex:1}
+.card .del{color:#b91c1c;background:#fee2e2;border:none;border-radius:10px;padding:9px 12px;font-size:12.5px;font-weight:700;cursor:pointer;flex:0 0 auto}
+.field{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px;margin-bottom:12px}
+.field label{display:block;font-size:12.5px;color:var(--ink-3);margin-bottom:6px}
+.field input,.field textarea{
+  width:100%;border:none;outline:none;font-family:inherit;font-size:16px;color:var(--ink);
+  background:transparent;resize:vertical;line-height:1.6;
+}
+.field textarea{min-height:190px}
+
 /* ---------- practice ---------- */
 .bar{position:sticky;top:0;z-index:20;background:rgba(246,247,249,.92);backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--line)}
 .bar .in{max-width:600px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px}
@@ -163,6 +184,11 @@ body{
       <div class="ru">Слушай и пиши</div>
       <p>听一句，写一句。按生活场景练，写完再看原文，慢慢把耳朵练出来。</p>
     </div>
+    <div class="mine-sec">
+      <h2>我的短文 <span class="cnt" id="customCnt"></span></h2>
+      <button class="addcard" id="btnAdd">＋ 添加短文（粘贴俄语文章，用手机语音朗读）</button>
+      <div id="customList"></div>
+    </div>
     <div class="tabs" id="tabs"></div>
     <div class="leveldesc" id="leveldesc"></div>
     <div id="textlist"></div>
@@ -186,13 +212,14 @@ body{
       <div class="under">
         <button class="pill" id="btnPrev">‹ 上一句</button>
         <button class="pill" id="btnSeq">▶ 连读</button>
+        <button class="pill" id="btnLoop">🔁 循环</button>
         <button class="pill" id="btnNextInline">下一句 ›</button>
       </div>
       <div class="speed">
         <span class="slabel">语速</span>
         <div class="chips" id="speedChips"></div>
       </div>
-      <div class="hint readhint" id="readHint">播放键 = 读 <b class="link" id="twiceToggle">2 遍</b>（第二遍慢一点）· 连读 = 每句读一遍，间隔 2 秒</div>
+      <div class="hint readhint" id="readHint">播放键 = 读 <b class="link" id="twiceToggle">2 遍</b>（第二遍慢一点）· 连读 = 每句读一遍，间隔 2 秒 · 循环 = 反复听这一篇</div>
     </div>
     <div class="dots" id="dots"></div>
     <div class="typebox">
@@ -207,6 +234,32 @@ body{
   <div class="bottom"><div class="in">
     <button class="btn ghost" id="btnReveal">看原文</button>
     <button class="btn primary" id="btnNext">下一句</button>
+  </div></div>
+</section>
+
+<!-- ================= ADD ================= -->
+<section class="screen" id="add">
+  <div class="bar">
+    <div class="in">
+      <button class="iconbtn" id="btnAddBack" aria-label="返回">‹</button>
+      <div class="ttl"><b id="addHead">添加短文</b><span>粘贴俄语文章，自动按句子切开</span></div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="field">
+      <label>标题（可不填）</label>
+      <input id="addTitle" type="text" placeholder="例如：Текст 3 · Моя семья" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>俄语正文</label>
+      <textarea id="addBody" placeholder="把俄语文章粘贴到这里…&#10;整段或一行一句都行，会按 . ! ? … 自动分句。" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off"></textarea>
+    </div>
+    <div class="hint" id="addHint">保存后每一句都能单独听，也能「连读」或「循环」反复听整篇。朗读用手机自带的俄语语音。</div>
+    <div class="foot" id="addFoot"></div>
+  </div>
+  <div class="bottom"><div class="in">
+    <button class="btn ghost" id="btnAddCancel">取消</button>
+    <button class="btn primary" id="btnAddSave">保存</button>
   </div></div>
 </section>
 
@@ -234,10 +287,30 @@ var CONTENT = {"version":5,"kind":"scene-texts","chapters":[{"id":"c1","name":"�
 /*CONTENT-END*/
 
 var STORE = 'diktant.v2';
+var CUSTOM_KEY = 'diktant.custom.v1';
 var SPEEDS = [0.6, 0.75, 0.9, 1, 1.25, 1.5];
-var state = { ch: 'c1', textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {} };
+var state = { ch: 'c1', textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {}, custom: [] };
+
+function loadCustom() {
+  try {
+    var raw = localStorage.getItem(CUSTOM_KEY);
+    var a = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(a)) return [];
+    var out = [];
+    for (var i = 0; i < a.length; i++) {
+      var it = a[i];
+      if (!it || !it.id || !it.sentences || !it.sentences.length) continue;
+      out.push(it);
+    }
+    return out;
+  } catch (e) { return []; }
+}
+function saveCustom() {
+  try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(state.custom)); } catch (e) {}
+}
 
 function load() {
+  state.custom = loadCustom();
   try {
     var raw = localStorage.getItem(STORE);
     if (!raw) return;
@@ -281,11 +354,15 @@ function itemOf(id) {
       for (var k = 0; k < ts.length; k++) if (ts[k].id === id) return { ch: CONTENT.chapters[i], sc: sc[j], t: ts[k] };
     }
   }
+  for (var m = 0; m < state.custom.length; m++) {
+    if (state.custom[m].id === id) return { ch: null, sc: null, t: state.custom[m] };
+  }
   return null;
 }
 function chapterOf(id) { var r = itemOf(id); return r ? r.ch : null; }
 function curText() { var r = itemOf(state.textId); return r ? r.t : null; }
 function curScene() { var r = itemOf(state.textId); return r ? r.sc : null; }
+function hasAudio(t) { return !t.custom; }
 function audioSrc(t, i) { return 'audio/' + t.id + '/s' + (i + 1) + '.mp3'; }
 function totalChars(t) {
   var n = 0;
@@ -339,6 +416,108 @@ function renderHome() {
       list.appendChild(c);
     })(ch.scenes[i]);
   }
+  renderCustom();
+}
+/* 我的短文：用户自己粘贴的文章，朗读走系统语音 */
+function renderCustom() {
+  var box = $('customList');
+  box.innerHTML = '';
+  var n = state.custom.length;
+  $('customCnt').textContent = n ? '（' + n + ' 篇）' : '';
+  for (var i = 0; i < n; i++) {
+    (function (it) {
+      var c = document.createElement('div');
+      c.className = 'card';
+      var extra = '';
+      if (state.done[it.id]) extra = '<span class="done">已练完</span>';
+      else if (state.lastPos && state.lastPos[it.id]) extra = '<span class="cont">练到第 ' + (state.lastPos[it.id] + 1) + ' 句</span>';
+      c.innerHTML =
+        '<h3>' + esc(it.title || '未命名短文') + ' <span class="lvl">我的</span></h3>' +
+        '<div class="meta"><span>' + it.sentences.length + ' 句 · 约 ' + estSeconds(it) + ' 秒</span>' + extra + '</div>';
+      var row = document.createElement('div');
+      row.className = 'row';
+      var b = document.createElement('button');
+      b.className = 'entry';
+      b.textContent = '短文 · ' + it.sentences.length + ' 句 · 手机朗读';
+      b.onclick = function () { openText(it.id); };
+      var del = document.createElement('button');
+      del.className = 'del';
+      del.textContent = '删除';
+      del.onclick = function (ev) {
+        if (ev && ev.stopPropagation) ev.stopPropagation();
+        removeCustom(it.id);
+      };
+      row.appendChild(b); row.appendChild(del);
+      c.appendChild(row);
+      box.appendChild(c);
+    })(state.custom[i]);
+  }
+}
+function removeCustom(id) {
+  var name = '';
+  for (var i = 0; i < state.custom.length; i++) if (state.custom[i].id === id) name = state.custom[i].title || '这篇短文';
+  if (!window.confirm('删除「' + name + '」？练习记录也会一起删掉。')) return;
+  var keep = [];
+  for (var j = 0; j < state.custom.length; j++) if (state.custom[j].id !== id) keep.push(state.custom[j]);
+  state.custom = keep;
+  saveCustom();
+  var seen2 = {}, typed2 = {};
+  for (var k in state.seen) if (k.indexOf(id + ':') !== 0) seen2[k] = state.seen[k];
+  for (var m in state.typed) if (m.indexOf(id + ':') !== 0) typed2[m] = state.typed[m];
+  state.seen = seen2; state.typed = typed2;
+  delete state.done[id];
+  if (state.lastPos) delete state.lastPos[id];
+  save();
+  renderCustom();
+}
+function openAdd() {
+  $('addTitle').value = '';
+  $('addBody').value = '';
+  if (!ttsAvailable()) {
+    $('addHint').textContent = '这个浏览器不支持语音朗读，换 Safari 打开这个网页再试。';
+  } else if (!hasRuVoice()) {
+    $('addHint').textContent = '手机里好像没装俄语语音：设置 → 辅助功能 → 朗读内容 → 声音 → 俄语，装一个再练。';
+  } else {
+    $('addHint').textContent = '保存后每一句都能单独听，也能「连读」或「循环」反复听整篇。朗读用手机自带的俄语语音。';
+  }
+  $('addFoot').textContent = '';
+  show('add');
+  setTimeout(function () { try { $('addTitle').focus(); } catch (e) {} }, 50);
+}
+function splitSentences(text) {
+  var out = [];
+  var lines = String(text || '').replace(/\r/g, '').split('\n');
+  for (var L = 0; L < lines.length; L++) {
+    var line = lines[L].replace(/\s+/g, ' ').trim();
+    if (!line) continue;
+    var parts = line.match(/[^.!?…]+[.!?…]+|[^.!?…]+$/g) || [line];
+    for (var i = 0; i < parts.length; i++) {
+      var s = parts[i].trim();
+      if (s) out.push({ ru: s, zh: '' });
+    }
+  }
+  return out;
+}
+function saveAdd() {
+  var body = $('addBody').value;
+  var sents = splitSentences(body);
+  var cyr = 0;
+  for (var i = 0; i < sents.length; i++) if (/[А-Яа-яЁё]/.test(sents[i].ru)) cyr++;
+  if (!sents.length) { $('addHint').textContent = '还没粘贴正文，先粘一篇俄语文章。'; return; }
+  if (!cyr) { $('addHint').textContent = '正文里没有俄文字母，检查一下是不是粘错了。'; return; }
+  var title = $('addTitle').value.replace(/\s+/g, ' ').trim();
+  if (!title) title = '未命名短文 ' + (state.custom.length + 1);
+  var id = 'u' + Date.now().toString(36);
+  var item = {
+    id: id, custom: true, kind: 'text', label: '短文', level: '我的',
+    title: title, sentences: sents, vocab: [],
+    sec: Math.round(totalChars({ sentences: sents }) / 13),
+  };
+  state.custom.push(item);
+  saveCustom();
+  renderHome();
+  show('home');
+  openText(id);
 }
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -383,13 +562,60 @@ function playSrc(t, idx, rate, done, fail) {
     });
   }
 }
+/* 系统语音（我的短文用）：选俄语音色，读一句 */
+function ttsAvailable() {
+  return !!(window.speechSynthesis && window.SpeechSynthesisUtterance);
+}
+function ttsVoice() {
+  if (!ttsAvailable()) return null;
+  var vs = window.speechSynthesis.getVoices() || [];
+  for (var i = 0; i < vs.length; i++) {
+    var lang = String(vs[i].lang || '').toLowerCase();
+    if (lang.indexOf('ru') === 0) return vs[i];
+  }
+  return null;
+}
+function speak(text, rate, done, fail) {
+  if (!ttsAvailable()) { if (fail) fail(); return; }
+  try { window.speechSynthesis.cancel(); } catch (e) {}
+  var u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ru-RU';
+  var v = ttsVoice();
+  if (v) u.voice = v;
+  u.rate = Math.min(2, Math.max(0.5, rate || 1));
+  u.onend = function () { u.onend = null; if (done) done(); };
+  u.onerror = function () { u.onerror = null; if (fail) fail(); else if (done) done(); };
+  try { window.speechSynthesis.speak(u); } catch (e) { if (fail) fail(); }
+}
+function hasRuVoice() {
+  if (!ttsAvailable()) return false;
+  var vs = window.speechSynthesis.getVoices() || [];
+  if (!vs.length) return true; // 还没加载出来，先按有处理
+  return !!ttsVoice();
+}
+function isSpeaking() {
+  try { return !!(window.speechSynthesis && window.speechSynthesis.speaking); } catch (e) { return false; }
+}
+function stopSpeaking() {
+  try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
+}
+/* 播一句：有录音就放录音，没有（我的短文）就用系统语音 */
+function playOne(t, idx, rate, done, fail) {
+  if (hasAudio(t)) { playSrc(t, idx, rate, done, fail); return; }
+  speak(t.sentences[idx].ru, rate, done, fail);
+}
 /* 连读状态 */
-var seq = { on: false, timer: null, token: 0 };
+var seq = { on: false, loop: false, timer: null, token: 0 };
 function updateSeqBtn() {
-  var b = $('btnSeq');
-  if (!b) return;
-  b.classList.toggle('on', seq.on);
-  b.textContent = seq.on ? '❚❚ 停止连读' : '▶ 连读';
+  var b = $('btnSeq'), l = $('btnLoop');
+  if (b) {
+    b.classList.toggle('on', seq.on && !seq.loop);
+    b.textContent = (seq.on && !seq.loop) ? '❚❚ 停止连读' : '▶ 连读';
+  }
+  if (l) {
+    l.classList.toggle('on', seq.on && seq.loop);
+    l.textContent = (seq.on && seq.loop) ? '❚❚ 停止循环' : '🔁 循环';
+  }
 }
 function markSeqDot(n) {
   var d = $('dots');
@@ -401,11 +627,13 @@ function markSeqDot(n) {
 }
 function stopSeq() {
   seq.on = false;
+  seq.loop = false;
   seq.token++;
   if (seq.timer) { clearTimeout(seq.timer); seq.timer = null; }
   var a = audioEl();
   a.onended = null;
   try { a.pause(); } catch (e) {}
+  stopSpeaking();
   markSeqDot(-1);
   resetPlayBtn();
   updateSeqBtn();
@@ -429,8 +657,13 @@ function renderPractice() {
   var sc = curScene();
   var i = state.idx;
   var s = t.sentences[i];
-  $('pTitle').textContent = sc.titleZh;
-  $('pSub').textContent = t.label + ' · ' + sc.title + ' · 第 ' + (i + 1) + ' / ' + t.sentences.length + ' 句';
+  if (t.custom) {
+    $('pTitle').textContent = t.title || '我的短文';
+    $('pSub').textContent = '我的短文 · 第 ' + (i + 1) + ' / ' + t.sentences.length + ' 句';
+  } else {
+    $('pTitle').textContent = sc.titleZh;
+    $('pSub').textContent = t.label + ' · ' + sc.title + ' · 第 ' + (i + 1) + ' / ' + t.sentences.length + ' 句';
+  }
   $('pProg').style.width = ((i) / t.sentences.length * 100) + '%';
   var dots = $('dots');
   dots.innerHTML = '';
@@ -457,8 +690,14 @@ function renderPractice() {
   updateSeqBtn();
   $('foldZh').open = false;
   renderZh(t); renderVocab(t);
+  var anyZh = false;
+  for (var z = 0; z < t.sentences.length; z++) if (t.sentences[z].zh) anyZh = true;
+  $('foldZh').style.display = anyZh ? '' : 'none';
+  $('foldVocab').style.display = (t.vocab && t.vocab.length) ? '' : 'none';
   var ch = chapterOf(t.id);
-  $('pFoot').textContent = (ch ? ch.name + ' · ' : '') + t.level + ' · 共 ' + t.sentences.length + ' 句 · ' + t.vocab.length + ' 个生词';
+  var lead = ch ? ch.name + ' · ' : '我的短文 · 手机朗读 · ';
+  $('pFoot').textContent = lead + (t.level || '') + ' · 共 ' + t.sentences.length + ' 句' +
+    (t.vocab && t.vocab.length ? ' · ' + t.vocab.length + ' 个生词' : '');
   try { ta.focus({ preventScroll: false }); } catch (e) { ta.focus(); }
 }
 function revealHTML(t, i) {
@@ -470,13 +709,14 @@ function revealHTML(t, i) {
     '<div class="mine">' + (mine.trim() ? esc(mine) : '（空）') + '</div>' +
     '<div class="lbl">原文' + (t.kind === 'dialog' ? '（' + (s.who === 'А' ? '女声' : '男声') + '）' : '') + '</div>' +
     '<div class="ru">' + spk + esc(s.ru) + '</div>' +
-    '<div class="zh">' + esc(s.zh) + '</div>' +
+    (s.zh ? '<div class="zh">' + esc(s.zh) + '</div>' : '') +
     '</div>';
 }
 function renderZh(t) {
   var h = '';
   for (var i = 0; i < t.sentences.length; i++) {
-    h += '<p><b>' + (i + 1) + '.</b> ' + (t.sentences[i].who ? esc(t.sentences[i].who) + ' ' : '') + esc(t.sentences[i].zh) + '</p>';
+    if (!t.sentences[i].zh && t.custom) continue;
+    h += '<p><b>' + (i + 1) + '.</b> ' + (t.sentences[i].who ? esc(t.sentences[i].who) + ' ' : '') + esc(t.sentences[i].zh || '') + '</p>';
   }
   $('zhBody').innerHTML = h;
 }
@@ -498,12 +738,12 @@ function startPlayback() {
   $('btnPlay').textContent = '❚❚';
   function failed() { resetPlayBtn(); }
   if (state.twice) {
-    playSrc(t, i, base, function () {
+    playOne(t, i, base, function () {
       var slow = Math.max(0.5, Math.round(base * 0.85 * 100) / 100);
-      playSrc(t, i, slow, function () { resetPlayBtn(); }, failed);
+      playOne(t, i, slow, function () { resetPlayBtn(); }, failed);
     }, failed);
   } else {
-    playSrc(t, i, base, function () { resetPlayBtn(); }, failed);
+    playOne(t, i, base, function () { resetPlayBtn(); }, failed);
   }
 }
 function playCurrent() {
@@ -523,22 +763,34 @@ function toggleTwice() {
   save();
   renderTwice();
 }
-/* 整篇连读：一句一句自动播，每句之间停 2 秒 */
-function startSeq() {
+/* 整篇连读（loop=true 时反复听）：一句一句自动播，每句之间停 2 秒 */
+function startSeq(loop) {
   var t = curText();
   if (!t) return;
   if (seq.on) { stopSeq(); return; }
+  if (loop && !hasAudio(t) && !ttsAvailable()) {
+    $('readHint').textContent = '这个浏览器没有可用的语音朗读，换 Safari 试试。';
+    return;
+  }
   seq.on = true;
+  seq.loop = !!loop;
   var my = ++seq.token;
   updateSeqBtn();
   var i = 0;
   function step() {
     if (!seq.on || my !== seq.token) return;
-    if (i >= t.sentences.length) { markSeqDot(-1); stopSeq(); return; }
+    if (i >= t.sentences.length) {
+      if (seq.loop) {
+        i = 0;
+        seq.timer = setTimeout(function () { seq.timer = null; step(); }, 2000);
+        return;
+      }
+      markSeqDot(-1); stopSeq(); return;
+    }
     markSeqDot(i);
     $('btnPlay').classList.add('playing');
     $('btnPlay').textContent = '❚❚';
-    playSrc(t, i, state.speed || 1, function () {
+    playOne(t, i, state.speed || 1, function () {
       if (!seq.on || my !== seq.token) return;
       seq.timer = setTimeout(function () { seq.timer = null; i++; step(); }, 2000);
     }, function () {
@@ -609,13 +861,19 @@ function finish() {
       '<div class="zh">' + esc(t.sentences[i].zh) + '</div></div>';
   }
   $('doneList').innerHTML = h;
-  var dsc = curScene() || { title: '', titleZh: '' };
-  $('doneSub').textContent = dsc.titleZh + ' · ' + t.label + ' · ' + dsc.title + '（' + t.sentences.length + ' 句）';
+  var dsc = curScene();
+  if (t.custom) {
+    $('doneSub').textContent = (t.title || '我的短文') + ' · 我的短文 · ' + t.sentences.length + ' 句';
+  } else {
+    dsc = dsc || { title: '', titleZh: '' };
+    $('doneSub').textContent = dsc.titleZh + ' · ' + t.label + ' · ' + dsc.title + '（' + t.sentences.length + ' 句）';
+  }
   var v = '';
   for (var j = 0; j < t.vocab.length; j++) {
     v += '<div class="vrow"><div class="vru">' + esc(t.vocab[j].ru) + '</div><div class="vzh">' + esc(t.vocab[j].zh) + '</div><div class="vpos">' + esc(t.vocab[j].pos || '') + '</div></div>';
   }
   $('doneVocab').innerHTML = v;
+  $('doneVocabFold').style.display = (t.vocab && t.vocab.length) ? '' : 'none';
   show('done');
 }
 function backHome() {
@@ -662,9 +920,15 @@ function setSpeed(v) {
 $('btnPlay').onclick = function () {
   var a = audioEl();
   if (!a.paused) { stopSeq(); a.pause(); resetPlayBtn(); return; }
+  if (isSpeaking()) { stopSeq(); return; }
   playCurrent();
 };
-$('btnSeq').onclick = function () { startSeq(); };
+$('btnSeq').onclick = function () { startSeq(false); };
+$('btnLoop').onclick = function () { startSeq(true); };
+$('btnAdd').onclick = function () { openAdd(); };
+$('btnAddBack').onclick = function () { show('home'); };
+$('btnAddCancel').onclick = function () { show('home'); };
+$('btnAddSave').onclick = function () { saveAdd(); };
 $('twiceToggle').onclick = function () { toggleTwice(); };
 $('btnPrev').onclick = function () { prevSentence(); };
 $('btnNextInline').onclick = function () { nextSentence(); };
