@@ -143,6 +143,14 @@ body{
 .fold .body{padding:0 16px 16px;font-size:14.5px;color:var(--ink-2)}
 .fold .body p{margin:0 0 8px}
 .fold .body p b{color:var(--ink)}
+/* 俄语全文 */
+#ruBody .ruhint{color:var(--ink-3);font-size:12.5px;margin:0 0 8px}
+#ruBody .sline{display:flex;gap:9px;padding:9px 0;border-bottom:1px dashed var(--line);cursor:pointer;line-height:1.5;border-radius:10px}
+#ruBody .sline:last-child{border-bottom:0}
+#ruBody .sline .n{flex:0 0 22px;color:var(--ink-3);font-size:12.5px;font-weight:700;padding-top:3px;text-align:right}
+#ruBody .sline .ru{color:var(--ink);font-size:14.5px}
+#ruBody .sline.cur{background:var(--blue-l);padding-left:6px;padding-right:6px;margin:0 -6px}
+#ruBody .sline.cur .n{color:var(--blue-d)}
 .vrow{display:flex;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line)}
 .vrow:last-child{border-bottom:none}
 .vrow .vru{font-weight:600;color:var(--ink);flex:0 0 38%}
@@ -243,7 +251,8 @@ body{
       <div class="hint">想不起来就点「看原文」，不丢人。</div>
     </div>
     <div id="revealBox"></div>
-    <details class="fold" id="foldZh"><summary>全文译文</summary><div class="body" id="zhBody"></div></details>
+    <details class="fold" id="foldRu"><summary>俄语全文</summary><div class="body" id="ruBody"></div></details>
+<details class="fold" id="foldZh"><summary>全文译文</summary><div class="body" id="zhBody"></div></details>
     <details class="fold" id="foldVocab"><summary>生词表</summary><div class="body" id="vocabBody"></div></details>
     <div class="foot" id="pFoot"></div>
   </div>
@@ -778,7 +787,8 @@ function renderPractice() {
   renderTwice();
   updateSeqBtn();
   $('foldZh').open = false;
-  renderZh(t); renderVocab(t);
+  renderRu(t); renderZh(t); renderVocab(t);
+  $('foldRu').style.display = t.sentences.length ? '' : 'none';
   var anyZh = false;
   for (var z = 0; z < t.sentences.length; z++) if (t.sentences[z].zh) anyZh = true;
   $('foldZh').style.display = anyZh ? '' : 'none';
@@ -800,6 +810,32 @@ function revealHTML(t, i) {
     '<div class="ru">' + spk + esc(s.ru) + '</div>' +
     (s.zh ? '<div class="zh">' + esc(s.zh) + '</div>' : '') +
     '</div>';
+}
+function renderRu(t) {
+  var box = $('ruBody');
+  box.innerHTML = '';
+  var hint = document.createElement('div');
+  hint.className = 'ruhint';
+  hint.textContent = '点任意一句，跳到那一句再听一遍';
+  box.appendChild(hint);
+  for (var i = 0; i < t.sentences.length; i++) {
+    var s = t.sentences[i];
+    var row = document.createElement('div');
+    row.className = 'sline' + (i === state.idx ? ' cur' : '');
+    row.setAttribute('data-i', i);
+    var n = document.createElement('span');
+    n.className = 'n';
+    n.textContent = String(i + 1);
+    var ru = document.createElement('span');
+    ru.className = 'ru';
+    ru.innerHTML = (s.who ? '<span class="who">' + esc(s.who) + '</span> ' : '') + esc(s.ru);
+    row.appendChild(n);
+    row.appendChild(ru);
+    (function (row2, k) {
+      row2.onclick = function () { goto_('', k); };
+    })(row, i);
+    box.appendChild(row);
+  }
 }
 function renderZh(t) {
   var h = '';
