@@ -88,6 +88,9 @@ body{
 .dot{width:10px;height:10px;border-radius:50%;background:#d7dbe3;border:none;padding:0;cursor:pointer}
 .dot.cur{background:var(--blue);transform:scale(1.35)}
 .dot.seen{background:#86c69a}
+.dot.seq{background:var(--blue);transform:scale(1.9);box-shadow:0 0 0 3px #dbe6fd}
+.link{color:var(--blue-d);border-bottom:1px dashed currentColor;cursor:pointer;font-weight:600}
+.readhint{margin:10px 2px 0;text-align:center}
 
 .typebox{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;margin-bottom:12px}
 .typebox textarea{
@@ -174,12 +177,14 @@ body{
       <button class="playbig" id="btnPlay" aria-label="播放">▶</button>
       <div class="under">
         <button class="pill" id="btnPrev">‹ 上一句</button>
+        <button class="pill" id="btnSeq">▶ 连读</button>
         <button class="pill" id="btnNextInline">下一句 ›</button>
       </div>
       <div class="speed">
         <span class="slabel">语速</span>
         <div class="chips" id="speedChips"></div>
       </div>
+      <div class="hint readhint" id="readHint">播放键 = 读 <b class="link" id="twiceToggle">2 遍</b>（第二遍慢一点）· 连读 = 每句读一遍，间隔 2 秒</div>
     </div>
     <div class="dots" id="dots"></div>
     <div class="typebox">
@@ -222,7 +227,7 @@ var CONTENT = {"version":4,"kind":"text","counts":{"chapters":6,"scenes":48,"sen
 
 var STORE = 'diktant.v2';
 var SPEEDS = [0.6, 0.75, 0.9, 1, 1.25, 1.5];
-var state = { ch: 'c1', textId: null, idx: 0, speed: 1, seen: {}, typed: {}, done: {}, open: {}, lastPos: {} };
+var state = { ch: 'c1', textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {} };
 
 function load() {
   try {
@@ -235,6 +240,7 @@ function load() {
       if (s.seen) state.seen = s.seen;
       if (s.done) state.done = s.done;
       if (typeof s.speed === 'number' && s.speed >= 0.5 && s.speed <= 2) state.speed = s.speed;
+      if (typeof s.twice === 'boolean') state.twice = s.twice;
       if (s.pos && typeof s.pos === 'object') state.lastPos = s.pos;
     }
   } catch (e) {}
@@ -242,7 +248,7 @@ function load() {
 function save() {
   try {
     localStorage.setItem(STORE, JSON.stringify({
-      ch: state.ch, speed: state.speed, typed: state.typed, seen: state.seen, done: state.done,
+      ch: state.ch, speed: state.speed, twice: state.twice, typed: state.typed, seen: state.seen, done: state.done,
       pos: state.lastPos || {}
     }));
   } catch (e) {}
@@ -328,11 +334,66 @@ function audioEl() {
   if (!audio) {
     audio = new Audio();
     audio.preload = 'auto';
-    audio.addEventListener('ended', function () { $('btnPlay').classList.remove('playing'); $('btnPlay').textContent = '▶'; });
   }
   return audio;
 }
+function resetPlayBtn() {
+  var b = $('btnPlay');
+  if (!b) return;
+  b.classList.remove('playing');
+  b.textContent = '▶';
+}
+function setRate(a, r) {
+  a.playbackRate = r;
+  if ('preservesPitch' in a) a.preservesPitch = true;
+  if ('mozPreservesPitch' in a) a.mozPreservesPitch = true;
+  if ('webkitPreservesPitch' in a) a.webkitPreservesPitch = true;
+}
+/* 播一句；播完调用 done，播放被系统拒绝（如 iOS 自动播放限制）调用 fail */
+function playSrc(t, idx, rate, done, fail) {
+  var a = audioEl();
+  try { a.pause(); } catch (e) {}
+  a.src = audioSrc(t, idx);
+  setRate(a, rate);
+  try { a.currentTime = 0; } catch (e) {}
+  a.onended = function () { a.onended = null; if (done) done(); };
+  var p = a.play();
+  if (p && p.catch) {
+    p.catch(function () {
+      a.onended = null;
+      if (fail) fail(); else if (done) done();
+    });
+  }
+}
+/* 连读状态 */
+var seq = { on: false, timer: null, token: 0 };
+function updateSeqBtn() {
+  var b = $('btnSeq');
+  if (!b) return;
+  b.classList.toggle('on', seq.on);
+  b.textContent = seq.on ? '❚❚ 停止连读' : '▶ 连读';
+}
+function markSeqDot(n) {
+  var d = $('dots');
+  if (!d) return;
+  for (var k = 0; k < d.children.length; k++) {
+    if (k === n) d.children[k].classList.add('seq');
+    else d.children[k].classList.remove('seq');
+  }
+}
+function stopSeq() {
+  seq.on = false;
+  seq.token++;
+  if (seq.timer) { clearTimeout(seq.timer); seq.timer = null; }
+  var a = audioEl();
+  a.onended = null;
+  try { a.pause(); } catch (e) {}
+  markSeqDot(-1);
+  resetPlayBtn();
+  updateSeqBtn();
+}
 function openText(id) {
+  stopSeq();
   state.textId = id;
   var ch = chapterOf(id);
   if (ch) state.ch = ch.id;
@@ -343,7 +404,7 @@ function openText(id) {
   save();
   show('practice');
   renderPractice();
-  playCurrent();
+  startPlayback();
 }
 function renderPractice() {
   var t = curText();
@@ -373,6 +434,8 @@ function renderPractice() {
   $('btnReveal').textContent = '看原文';
   $('btnNext').textContent = (i === t.sentences.length - 1) ? '完成' : '下一句';
   renderSpeeds();
+  renderTwice();
+  updateSeqBtn();
   $('foldZh').open = false;
   renderZh(t); renderVocab(t);
   var ch = chapterOf(t.id);
@@ -404,21 +467,64 @@ function renderVocab(t) {
   $('vocabBody').innerHTML = h;
 }
 
-function playCurrent() {
+function startPlayback() {
   var t = curText();
   if (!t) return;
-  var a = audioEl();
-  a.pause();
-  a.src = audioSrc(t, state.idx);
-  a.playbackRate = state.speed || 1;
-  if ('preservesPitch' in a) a.preservesPitch = true;
-  if ('mozPreservesPitch' in a) a.mozPreservesPitch = true;
-  if ('webkitPreservesPitch' in a) a.webkitPreservesPitch = true;
-  a.currentTime = 0;
-  var p = a.play();
+  var i = state.idx;
+  var base = state.speed || 1;
   $('btnPlay').classList.add('playing');
   $('btnPlay').textContent = '❚❚';
-  if (p && p.catch) p.catch(function () { $('btnPlay').classList.remove('playing'); $('btnPlay').textContent = '▶'; });
+  function failed() { resetPlayBtn(); }
+  if (state.twice) {
+    playSrc(t, i, base, function () {
+      var slow = Math.max(0.5, Math.round(base * 0.85 * 100) / 100);
+      playSrc(t, i, slow, function () { resetPlayBtn(); }, failed);
+    }, failed);
+  } else {
+    playSrc(t, i, base, function () { resetPlayBtn(); }, failed);
+  }
+}
+function playCurrent() {
+  var a = audioEl();
+  if (!a.paused) { stopSeq(); a.pause(); resetPlayBtn(); return; }
+  if (seq.on) stopSeq();
+  startPlayback();
+}
+function renderTwice() {
+  var tt = $('twiceToggle');
+  if (!tt) return;
+  tt.textContent = state.twice ? '2 遍' : '1 遍';
+  tt.setAttribute('aria-label', state.twice ? '每句读两遍，点击改为一遍' : '每句读一遍，点击改为两遍');
+}
+function toggleTwice() {
+  state.twice = !state.twice;
+  save();
+  renderTwice();
+}
+/* 整篇连读：一句一句自动播，每句之间停 2 秒 */
+function startSeq() {
+  var t = curText();
+  if (!t) return;
+  if (seq.on) { stopSeq(); return; }
+  seq.on = true;
+  var my = ++seq.token;
+  updateSeqBtn();
+  var i = 0;
+  function step() {
+    if (!seq.on || my !== seq.token) return;
+    if (i >= t.sentences.length) { markSeqDot(-1); stopSeq(); return; }
+    markSeqDot(i);
+    $('btnPlay').classList.add('playing');
+    $('btnPlay').textContent = '❚❚';
+    playSrc(t, i, state.speed || 1, function () {
+      if (!seq.on || my !== seq.token) return;
+      seq.timer = setTimeout(function () { seq.timer = null; i++; step(); }, 2000);
+    }, function () {
+      /* 被浏览器拦了（例如锁屏/自动播放限制）就停下，让用户点一下再试 */
+      if (my === seq.token) stopSeq();
+    });
+  }
+  step();
 }
 function rememberTyped() {
   var t = curText();
@@ -432,7 +538,7 @@ function goto_(typedNow, n) {
   rememberTyped();
   state.idx = n;
   renderPractice();
-  playCurrent();
+  startPlayback();
 }
 function toggleReveal() {
   var t = curText();
@@ -459,16 +565,17 @@ function nextSentence() {
   if (state.idx >= t.sentences.length - 1) { finish(); return; }
   state.idx++;
   renderPractice();
-  playCurrent();
+  startPlayback();
 }
 function prevSentence() {
   if (state.idx <= 0) return;
   rememberTyped();
   state.idx--;
   renderPractice();
-  playCurrent();
+  startPlayback();
 }
 function finish() {
+  stopSeq();
   var t = curText();
   state.done[t.id] = 1;
   if (state.lastPos) state.lastPos[t.id] = 0;
@@ -489,6 +596,7 @@ function finish() {
   show('done');
 }
 function backHome() {
+  stopSeq();
   rememberTyped();
   var t = curText();
   if (t && state.lastPos && state.seen && Object.keys(state.seen).length) {
@@ -530,9 +638,11 @@ function setSpeed(v) {
 }
 $('btnPlay').onclick = function () {
   var a = audioEl();
-  if (!a.paused) { a.pause(); $('btnPlay').classList.remove('playing'); $('btnPlay').textContent = '▶'; return; }
+  if (!a.paused) { stopSeq(); a.pause(); resetPlayBtn(); return; }
   playCurrent();
 };
+$('btnSeq').onclick = function () { startSeq(); };
+$('twiceToggle').onclick = function () { toggleTwice(); };
 $('btnPrev').onclick = function () { prevSentence(); };
 $('btnNextInline').onclick = function () { nextSentence(); };
 $('btnReveal').onclick = function () { toggleReveal(); };
@@ -563,9 +673,9 @@ $('btnAgain').onclick = function () {
   save();
   show('practice');
   renderPractice();
-  playCurrent();
+  startPlayback();
 };
-$('btnBackHome').onclick = function () { renderHome(); show('home'); };
+$('btnBackHome').onclick = function () { stopSeq(); renderHome(); show('home'); };
 </script>
 <script>
 if ('serviceWorker' in navigator) {
