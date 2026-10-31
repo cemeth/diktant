@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="俄语听写">
+<meta name="robots" content="noindex,nofollow">
+<title>俄语听写 · Слушай и пиши</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{
+  --blue:#2563eb; --blue-d:#1d4ed8; --blue-l:#e8effd;
+  --green:#15803d; --green-l:#e9f7ee;
+  --ink:#111827; --ink-2:#4b5563; --ink-3:#9ca3af;
+  --line:#e5e7eb; --card:#ffffff; --bg:#f6f7f9;
+  --radius:16px; --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px -12px rgba(16,24,40,.18);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:16px; line-height:1.55; -webkit-font-smoothing:antialiased;
+  padding-bottom:calc(96px + env(safe-area-inset-bottom));
+}
+.wrap{max-width:600px;margin:0 auto;padding:0 16px}
+.screen{display:none}
+.screen.on{display:block}
+
+/* ---------- home ---------- */
+.hero{padding:28px 0 10px}
+.hero h1{margin:0;font-size:26px;letter-spacing:-.4px}
+.hero .ru{color:var(--blue);font-size:14px;letter-spacing:.3px;margin-top:4px}
+.hero p{margin:10px 0 0;color:var(--ink-2);font-size:14px}
+.tabs{display:flex;gap:8px;margin:18px 0 4px;overflow-x:auto;padding-bottom:2px}
+.tab{
+  flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink-2);
+  padding:9px 16px;border-radius:999px;font-size:15px;font-weight:600;cursor:pointer;
+}
+.tab.on{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 4px 12px -4px rgba(37,99,235,.5)}
+.leveldesc{color:var(--ink-3);font-size:13px;margin:8px 2px 14px}
+.card{
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:16px;margin-bottom:12px;cursor:pointer;border:1px solid rgba(16,24,40,.04);
+  transition:transform .08s ease;
+}
+.card:active{transform:scale(.99)}
+.card h3{margin:0;font-size:17px;display:flex;align-items:center;gap:8px}
+.card .zh{color:var(--ink-2);font-size:14px;margin-top:2px}
+.card .meta{color:var(--ink-3);font-size:12.5px;margin-top:8px;display:flex;gap:10px;align-items:center}
+.card .done{color:var(--green);background:var(--green-l);border-radius:999px;padding:1px 8px;font-size:11.5px;font-weight:700}
+.card .cont{color:var(--blue);background:var(--blue-l);border-radius:999px;padding:1px 8px;font-size:11.5px;font-weight:700}
+
+/* ---------- practice ---------- */
+.bar{position:sticky;top:0;z-index:20;background:rgba(246,247,249,.92);backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--line)}
+.bar .in{max-width:600px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px}
+.iconbtn{border:none;background:var(--card);box-shadow:var(--shadow);width:38px;height:38px;border-radius:12px;font-size:17px;cursor:pointer;color:var(--ink);flex:0 0 auto}
+.bar .ttl{flex:1;min-width:0}
+.bar .ttl b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .ttl span{font-size:12px;color:var(--ink-3)}
+.pbar{height:3px;background:var(--line)}
+.pbar i{display:block;height:100%;background:var(--blue);width:0;transition:width .25s ease}
+
+.player{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin:14px 0;text-align:center}
+.playbig{
+  width:108px;height:108px;border-radius:50%;border:none;cursor:pointer;
+  background:linear-gradient(160deg,#3b82f6,#2563eb);color:#fff;font-size:40px;
+  box-shadow:0 10px 28px -10px rgba(37,99,235,.75);display:inline-flex;align-items:center;justify-content:center;
+  transition:transform .08s;
+}
+.playbig:active{transform:scale(.96)}
+.playbig.playing{background:linear-gradient(160deg,#60a5fa,#3b82f6)}
+.under{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+.pill{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font-size:13.5px;color:var(--ink-2);cursor:pointer}
+.pill.on{background:var(--blue-l);border-color:#c7d7fb;color:var(--blue-d);font-weight:600}
+.dots{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:2px 0 14px}
+.dot{width:10px;height:10px;border-radius:50%;background:#d7dbe3;border:none;padding:0;cursor:pointer}
+.dot.cur{background:var(--blue);transform:scale(1.35)}
+.dot.seen{background:#86c69a}
+
+.typebox{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;margin-bottom:12px}
+.typebox textarea{
+  width:100%;border:none;outline:none;resize:vertical;min-height:88px;font-size:17px;line-height:1.6;
+  font-family:inherit;color:var(--ink);background:transparent;
+}
+.typebox textarea::placeholder{color:var(--ink-3)}
+.hint{color:var(--ink-3);font-size:12.5px;padding:0 4px 2px}
+
+.reveal{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:12px;border-left:4px solid var(--green)}
+.reveal .lbl{font-size:12px;color:var(--ink-3);margin-bottom:3px}
+.reveal .mine{color:var(--ink-2);font-size:15px;margin-bottom:12px;white-space:pre-wrap;word-break:break-word}
+.reveal .ru{font-size:19px;font-weight:600;line-height:1.5;white-space:pre-wrap;word-break:break-word;color:var(--green)}
+.reveal .zh{color:var(--ink-2);font-size:14.5px;margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+
+.fold{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
+.fold summary{padding:14px 16px;cursor:pointer;font-size:14.5px;font-weight:600;color:var(--ink-2);list-style:none;display:flex;justify-content:space-between;align-items:center}
+.fold summary::-webkit-details-marker{display:none}
+.fold summary::after{content:"＋";color:var(--ink-3);font-weight:400}
+.fold[open] summary::after{content:"－"}
+.fold .body{padding:0 16px 16px;font-size:14.5px;color:var(--ink-2)}
+.fold .body p{margin:0 0 8px}
+.fold .body p b{color:var(--ink)}
+.vrow{display:flex;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.vrow:last-child{border-bottom:none}
+.vrow .vru{font-weight:600;color:var(--ink);flex:0 0 38%}
+.vrow .vzh{flex:1}
+.vrow .vpos{color:var(--ink-3);font-size:12px;flex:0 0 auto}
+
+.bottom{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;
+  background:rgba(255,255,255,.94);backdrop-filter:blur(12px);border-top:1px solid var(--line);
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+}
+.bottom .in{max-width:600px;margin:0 auto;display:flex;gap:10px}
+.btn{flex:1;border:none;border-radius:14px;padding:14px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn.ghost{background:#eef1f5;color:var(--ink)}
+.btn.primary{background:var(--blue);color:#fff;box-shadow:0 8px 20px -10px rgba(37,99,235,.8)}
+.btn:active{transform:scale(.99)}
+.btn[disabled]{opacity:.45}
+
+/* ---------- done ---------- */
+.doneh{text-align:center;padding:30px 0 6px}
+.doneh .big{font-size:44px}
+.doneh h2{margin:6px 0 2px;font-size:22px}
+.doneh p{margin:4px 0 0;color:var(--ink-2);font-size:14px}
+.sentline{padding:10px 0;border-bottom:1px solid var(--line)}
+.sentline:last-child{border-bottom:none}
+.sentline .n{color:var(--ink-3);font-size:12px}
+.sentline .ru{font-size:16.5px;font-weight:600}
+.sentline .zh{color:var(--ink-2);font-size:14px;margin-top:2px}
+.foot{text-align:center;color:var(--ink-3);font-size:12px;padding:22px 0 10px}
+</style>
+</head>
+<body>
+
+<!-- ================= HOME ================= -->
+<section class="screen on" id="home">
+  <div class="wrap">
+    <div class="hero">
+      <h1>俄语听写</h1>
+      <div class="ru">Слушай и пиши</div>
+      <p>听一句，写一句。写完再看原文，慢慢把耳朵练出来。</p>
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <div class="leveldesc" id="leveldesc"></div>
+    <div id="textlist"></div>
+    <div class="foot">共 16 篇 · 120 句 · 音频离线可用</div>
+  </div>
+</section>
+
+<!-- ================= PRACTICE ================= -->
+<section class="screen" id="practice">
+  <div class="bar">
+    <div class="in">
+      <button class="iconbtn" id="btnBack" aria-label="返回">‹</button>
+      <div class="ttl"><b id="pTitle">—</b><span id="pSub">—</span></div>
+      <button class="iconbtn" id="btnDots" aria-label="句子列表">⋯</button>
+    </div>
+    <div class="pbar"><i id="pProg"></i></div>
+  </div>
+  <div class="wrap">
+    <div class="player">
+      <button class="playbig" id="btnPlay" aria-label="播放">▶</button>
+      <div class="under">
+        <button class="pill" id="btnSlow">🐢 慢速</button>
+        <button class="pill" id="btnPrev">‹ 上一句</button>
+        <button class="pill" id="btnNextInline">下一句 ›</button>
+      </div>
+    </div>
+    <div class="dots" id="dots"></div>
+    <div class="typebox">
+      <textarea id="input" placeholder="听完把句子写在这里…" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off"></textarea>
+      <div class="hint">想不起来就点「看原文」，不丢人。</div>
+    </div>
+    <div id="revealBox"></div>
+    <details class="fold" id="foldZh"><summary>全文译文</summary><div class="body" id="zhBody"></div></details>
+    <details class="fold" id="foldVocab"><summary>生词表</summary><div class="body" id="vocabBody"></div></details>
+    <div class="foot" id="pFoot"></div>
+  </div>
+  <div class="bottom"><div class="in">
+    <button class="btn ghost" id="btnReveal">看原文</button>
+    <button class="btn primary" id="btnNext">下一句</button>
+  </div></div>
+</section>
+
+<!-- ================= DONE ================= -->
+<section class="screen" id="done">
+  <div class="wrap">
+    <div class="doneh">
+      <div class="big">🎧</div>
+      <h2>这一篇听完了</h2>
+      <p id="doneSub">—</p>
+    </div>
+    <div class="fold" style="display:block"><div class="body" id="doneList"></div></div>
+    <details class="fold" id="doneVocabFold"><summary>本篇生词</summary><div class="body" id="doneVocab"></div></details>
+    <div class="foot">明天再来一遍，会明显不一样。</div>
+  </div>
+  <div class="bottom"><div class="in">
+    <button class="btn ghost" id="btnAgain">再练一遍</button>
+    <button class="btn primary" id="btnBackHome">回目录</button>
+  </div></div>
+</section>
+
+<script>
+/*CONTENT-START*/
+var CONTENT = {"version":2,"levels":[{"id":"a1","name":"A1","desc":"入门：日常词汇、现在时、最常用的句子","texts":[{"id":"a1-1","title":"Знакомство","titleZh":"自我介绍","blurb":"第一次见面怎么介绍自己","sentences":[{"ru":"Меня зовут Антон.","zh":"我叫安东。"},{"ru":"Я студент.","zh":"我是大学生。"},{"ru":"Я учусь в университете.","zh":"我在大学读书。"},{"ru":"Я живу в Москве.","zh":"我住在莫斯科。"},{"ru":"У меня есть мама, папа и сестра.","zh":"我有妈妈、爸爸和一个妹妹。"},{"ru":"Я говорю по-русски и по-английски.","zh":"我会说俄语和英语。"}],"vocab":[{"ru":"знакомство","zh":"认识、相识","pos":"名词"},{"ru":"студент","zh":"大学生","pos":"名词"},{"ru":"учиться","zh":"学习、上学","pos":"动词"},{"ru":"жить","zh":"住在、生活","pos":"动词"},{"ru":"сестра","zh":"姐妹","pos":"名词"},{"ru":"говорить по-русски","zh":"说俄语","pos":"短语"}]},{"id":"a1-2","title":"Мой день","titleZh":"我的一天","blurb":"从起床到睡觉，一天的时间怎么过","sentences":[{"ru":"Я встаю в семь часов.","zh":"我七点起床。"},{"ru":"Я завтракаю и пью кофе.","zh":"我吃早饭，喝咖啡。"},{"ru":"В восемь часов я иду в университет.","zh":"八点我去大学。"},{"ru":"Я учусь до трёх часов.","zh":"我学习到三点。"},{"ru":"Вечером я делаю домашнее задание.","zh":"晚上我做作业。"},{"ru":"Я ложусь спать в одиннадцать часов.","zh":"我十一点睡觉。"}],"vocab":[{"ru":"вставать","zh":"起床","pos":"动词"},{"ru":"завтракать","zh":"吃早饭","pos":"动词"},{"ru":"домашнее задание","zh":"家庭作业","pos":"短语"},{"ru":"вечером","zh":"在晚上","pos":"副词"},{"ru":"ложиться спать","zh":"上床睡觉","pos":"短语"},{"ru":"час","zh":"小时、……点","pos":"名词"}]},{"id":"a1-3","title":"В магазине","titleZh":"在商店","blurb":"买面包牛奶，问价钱，刷卡付钱","sentences":[{"ru":"Я иду в магазин.","zh":"我去商店。"},{"ru":"Мне нужны хлеб, молоко и яйца.","zh":"我需要面包、牛奶和鸡蛋。"},{"ru":"Сколько стоит хлеб?","zh":"面包多少钱？"},{"ru":"Хлеб стоит сорок рублей.","zh":"面包四十卢布。"},{"ru":"Можно платить картой?","zh":"可以刷卡吗？"},{"ru":"Спасибо, до свидания!","zh":"谢谢，再见！"}],"vocab":[{"ru":"магазин","zh":"商店","pos":"名词"},{"ru":"хлеб","zh":"面包","pos":"名词"},{"ru":"молоко","zh":"牛奶","pos":"名词"},{"ru":"сколько стоит","zh":"多少钱","pos":"短语"},{"ru":"рубль","zh":"卢布","pos":"名词"},{"ru":"платить картой","zh":"刷卡付款","pos":"短语"}]},{"id":"a1-4","title":"Моя семья","titleZh":"我的家人","blurb":"家里有几口人，他们做什么工作","sentences":[{"ru":"Моя семья небольшая.","zh":"我家人口不多。"},{"ru":"У меня есть брат.","zh":"我有一个哥哥。"},{"ru":"Он работает в больнице.","zh":"他在医院工作。"},{"ru":"Моя мама учитель.","zh":"我妈妈是老师。"},{"ru":"Мы живём в большом доме.","zh":"我们住在一栋大房子里。"},{"ru":"По вечерам мы ужинаем вместе.","zh":"晚上我们一起吃晚饭。"}],"vocab":[{"ru":"семья","zh":"家庭、家人","pos":"名词"},{"ru":"брат","zh":"哥哥、弟弟","pos":"名词"},{"ru":"работать","zh":"工作","pos":"动词"},{"ru":"больница","zh":"医院","pos":"名词"},{"ru":"учитель","zh":"老师","pos":"名词"},{"ru":"ужинать вместе","zh":"一起吃晚饭","pos":"短语"}]}]},{"id":"a2","name":"A2","desc":"基础：过去时、常见生活场景、连贯的小故事","texts":[{"id":"a2-1","title":"Поездка в другой город","titleZh":"去另外一个城市","blurb":"周六坐火车出去一天，看到什么、吃了什么","sentences":[{"ru":"В субботу я поехал в другой город.","zh":"星期六我去了另一个城市。"},{"ru":"Поезд шёл четыре часа.","zh":"火车开了四个小时。"},{"ru":"Я гулял по центру и фотографировал улицы.","zh":"我在市中心散步，拍街道。"},{"ru":"Погода была холодная, но солнечная.","zh":"天气很冷，但出着太阳。"},{"ru":"Я пообедал в маленьком кафе, где было мало людей.","zh":"我在一家没什么人的小咖啡馆吃了午饭。"},{"ru":"Вечером я вернулся домой совсем уставший.","zh":"晚上我回到家，累得不行。"},{"ru":"Мне очень понравилась эта поездка, и я хочу поехать снова.","zh":"我很喜欢这次出行，还想再去一次。"}],"vocab":[{"ru":"поездка","zh":"出行、旅行","pos":"名词"},{"ru":"поезд","zh":"火车","pos":"名词"},{"ru":"гулять","zh":"散步","pos":"动词"},{"ru":"фотографировать","zh":"拍照","pos":"动词"},{"ru":"уставший","zh":"累了的","pos":"形容词"},{"ru":"понравиться","zh":"使喜欢","pos":"动词"}]},{"id":"a2-2","title":"В кафе","titleZh":"在咖啡馆","blurb":"点菜、结账，聊了很久","sentences":[{"ru":"Вчера я встретил друга в кафе.","zh":"昨天我在咖啡馆遇到一个朋友。"},{"ru":"Официант принёс нам меню.","zh":"服务员给我们拿来了菜单。"},{"ru":"Я заказал суп и чай.","zh":"我点了汤和茶。"},{"ru":"Друг взял салат и кофе.","zh":"朋友要了沙拉和咖啡。"},{"ru":"Обед стоил тысячу рублей.","zh":"这顿午饭花了一千卢布。"},{"ru":"Мы долго разговаривали о работе и о планах.","zh":"我们聊了很久工作和计划。"},{"ru":"В кафе было тихо и уютно.","zh":"咖啡馆里安静又舒服。"}],"vocab":[{"ru":"встретить","zh":"遇见、接","pos":"动词"},{"ru":"официант","zh":"服务员","pos":"名词"},{"ru":"заказать","zh":"点（菜）、订购","pos":"动词"},{"ru":"обед","zh":"午饭","pos":"名词"},{"ru":"уютно","zh":"舒适地","pos":"副词"},{"ru":"разговаривать","zh":"谈话、聊天","pos":"动词"}]},{"id":"a2-3","title":"Времена года","titleZh":"四季","blurb":"俄罗斯的四季各是什么样子","sentences":[{"ru":"В России четыре времени года.","zh":"俄罗斯有四个季节。"},{"ru":"Летом обычно тепло и солнечно.","zh":"夏天通常温暖、晴朗。"},{"ru":"Осенью часто идёт дождь.","zh":"秋天经常下雨。"},{"ru":"Зимой бывает очень холодно.","zh":"冬天常常非常冷。"},{"ru":"Зимой дни короткие, а ночи длинные.","zh":"冬天白天短，夜晚长。"},{"ru":"Весной начинает таять снег.","zh":"春天雪开始融化。"},{"ru":"Я люблю осень, потому что она красивая.","zh":"我喜欢秋天，因为它很美。"}],"vocab":[{"ru":"время года","zh":"季节","pos":"短语"},{"ru":"осень","zh":"秋天","pos":"名词"},{"ru":"дождь","zh":"雨","pos":"名词"},{"ru":"таять","zh":"融化","pos":"动词"},{"ru":"снег","zh":"雪","pos":"名词"},{"ru":"потому что","zh":"因为","pos":"连词"}]},{"id":"a2-4","title":"У врача","titleZh":"去看医生","blurb":"头疼、去诊所、拿药","sentences":[{"ru":"Вчера у меня болела голова.","zh":"昨天我头疼。"},{"ru":"Я пошёл в поликлинику.","zh":"我去了社区诊所。"},{"ru":"Врач спросил, что случилось.","zh":"医生问发生了什么事。"},{"ru":"Я сказал, что очень устал и плохо спал.","zh":"我说我很累，而且没睡好。"},{"ru":"Врач посмотрел меня и выписал рецепт.","zh":"医生给我检查了，开了处方。"},{"ru":"Я купил лекарство в аптеке.","zh":"我在药店买了药。"},{"ru":"Сегодня мне уже гораздо лучше.","zh":"今天我已经好多了。"}],"vocab":[{"ru":"болеть","zh":"疼、生病","pos":"动词"},{"ru":"голова","zh":"头","pos":"名词"},{"ru":"врач","zh":"医生","pos":"名词"},{"ru":"рецепт","zh":"处方","pos":"名词"},{"ru":"лекарство","zh":"药","pos":"名词"},{"ru":"аптека","zh":"药店","pos":"名词"}]}]},{"id":"b1","name":"B1","desc":"进阶：从句、叙述与观点，接近专业课和考试的语速","texts":[{"id":"b1-1","title":"Первый семестр","titleZh":"第一个学期","blurb":"听不懂讲座、记笔记、慢慢适应","sentences":[{"ru":"Я учусь на первом курсе инженерного факультета.","zh":"我在工程学院读一年级。"},{"ru":"Каждый семестр у нас появляются новые предметы и новые преподаватели.","zh":"每个学期我们都有新的课程和新的老师。"},{"ru":"Сначала мне было трудно понимать лекции на русском языке.","zh":"一开始听俄语讲座对我来说很难。"},{"ru":"Я стараюсь записывать главные мысли, а не каждое слово.","zh":"我尽量记要点，而不是记每个词。"},{"ru":"После занятий я просматриваю записи и выписываю незнакомые слова.","zh":"下课后我会翻看笔记，把不认识的词抄下来。"},{"ru":"Кроме лекций, у нас много лабораторных работ.","zh":"除了讲座，我们还有很多实验课。"},{"ru":"Постепенно я заметил, что стал понимать речь намного лучше.","zh":"渐渐地我发现，我听懂话的能力好了很多。"},{"ru":"Главное — не бояться задавать вопросы, даже если немного стесняешься.","zh":"最重要的是别怕提问，哪怕有点不好意思。"}],"vocab":[{"ru":"факультет","zh":"系、院","pos":"名词"},{"ru":"предмет","zh":"科目、物品","pos":"名词"},{"ru":"преподаватель","zh":"教师","pos":"名词"},{"ru":"записывать","zh":"记录","pos":"动词"},{"ru":"просматривать","zh":"浏览、翻阅","pos":"动词"},{"ru":"постепенно","zh":"逐渐地","pos":"副词"},{"ru":"стесняться","zh":"害羞、不好意思","pos":"动词"}]},{"id":"b1-2","title":"Русская зима","titleZh":"俄罗斯的冬天","blurb":"第一场雪、冰场、严寒，以及冬天的心情","sentences":[{"ru":"Русская зима — это не только сильный холод, но и особая красота.","zh":"俄罗斯的冬天不只是严寒，还有一种特别的美。"},{"ru":"Когда выпадает первый снег, город становится тише и светлее.","zh":"第一场雪落下时，城市变得安静而明亮。"},{"ru":"В праздники на центральной площади открывают каток и ставят большую ёлку.","zh":"过节时市中心广场会开冰场，还会立起一棵大枞树。"},{"ru":"Дети лепят снеговиков, а взрослые гуляют до позднего вечера.","zh":"孩子们堆雪人，大人们散步到很晚。"},{"ru":"Иногда мороз бывает таким сильным, что лучше остаться дома.","zh":"有时冷得厉害，最好待在家里。"},{"ru":"Если вы долго находитесь на улице, нужно одеваться очень тепло.","zh":"如果要在外面待很久，就得穿得非常暖和。"},{"ru":"Зимой легко простудиться, поэтому я всегда ношу шапку и шарф.","zh":"冬天容易感冒，所以我总是戴帽子和围巾。"},{"ru":"Когда мне грустно, я иду гулять по заснеженному парку.","zh":"心情不好的时候，我就去落满雪的公园散步。"}],"vocab":[{"ru":"выпадать","zh":"落下（雪、雨）","pos":"动词"},{"ru":"каток","zh":"冰场","pos":"名词"},{"ru":"ёлка","zh":"枞树、新年树","pos":"名词"},{"ru":"снеговик","zh":"雪人","pos":"名词"},{"ru":"мороз","zh":"严寒","pos":"名词"},{"ru":"простудиться","zh":"着凉、感冒","pos":"动词"},{"ru":"заснеженный","zh":"覆雪的","pos":"形容词"}]},{"id":"b1-3","title":"Работа и хобби","titleZh":"工作和爱好","blurb":"爱好是不是浪费时间？两个人的做法","sentences":[{"ru":"Раньше я думал, что хобби — это пустая трата времени.","zh":"以前我觉得爱好就是浪费时间。"},{"ru":"Теперь я уверен, что увлечение помогает отдыхать и думать яснее.","zh":"现在我相信，爱好能让人休息好，思路也更清楚。"},{"ru":"Мой друг после работы собирает модели самолётов.","zh":"我的朋友下班后做飞机模型。"},{"ru":"Он говорит, что это занятие учит его терпению и вниманию.","zh":"他说这个爱好让他学会耐心和专注。"},{"ru":"Я выбрал фотографию, потому что она связана с прогулками.","zh":"我选了摄影，因为它和散步连在一起。"},{"ru":"В выходные мы вместе ходим по городу и ищем интересные кадры.","zh":"周末我们一起在城里转，找有意思的画面。"},{"ru":"Иногда мне кажется, что на это уходит слишком много времени.","zh":"有时我觉得这花的时间太多了。"},{"ru":"Но без такого отдыха работа становится гораздо тяжелее.","zh":"可是没有这样的休息，工作会难熬得多。"}],"vocab":[{"ru":"хобби","zh":"爱好","pos":"名词"},{"ru":"увлечение","zh":"爱好、着迷的事","pos":"名词"},{"ru":"трата времени","zh":"浪费时间","pos":"短语"},{"ru":"терпение","zh":"耐心","pos":"名词"},{"ru":"внимание","zh":"注意力","pos":"名词"},{"ru":"кадр","zh":"画面、镜头","pos":"名词"},{"ru":"уходить на что-то","zh":"花在……上","pos":"短语"}]},{"id":"b1-4","title":"Поездка в Петербург","titleZh":"去圣彼得堡","blurb":"十二小时火车、白夜、博物馆和一座小城","sentences":[{"ru":"Прошлым летом я впервые поехал в Санкт-Петербург.","zh":"去年夏天我第一次去了圣彼得堡。"},{"ru":"Я ехал на поезде, и дорога заняла почти двенадцать часов.","zh":"我坐火车去，路上花了将近十二个小时。"},{"ru":"В первый день мы долго гуляли по набережной и смотрели мосты.","zh":"第一天我们沿着河岸走了很久，看桥。"},{"ru":"Больше всего меня удивили белые ночи: даже ночью было светло.","zh":"最让我吃惊的是白夜：连夜里都是亮的。"},{"ru":"Мы посетили музеи, где я видел картины известных художников.","zh":"我们去了博物馆，我在那里看到了名画家的画。"},{"ru":"Один день мы провели в маленьком городке рядом с Петербургом.","zh":"有一天我们是在彼得堡附近的一个小城里度过的。"},{"ru":"Там почти нет туристов, и жизнь идёт спокойно и медленно.","zh":"那里几乎没有游客，生活平静而缓慢。"},{"ru":"Если получится, я обязательно вернусь туда ещё раз.","zh":"如果有可能，我一定会再回去一次。"}],"vocab":[{"ru":"впервые","zh":"第一次","pos":"副词"},{"ru":"набережная","zh":"滨河路、沿岸街","pos":"名词"},{"ru":"белые ночи","zh":"白夜","pos":"短语"},{"ru":"удивить","zh":"使惊讶","pos":"动词"},{"ru":"художник","zh":"画家","pos":"名词"},{"ru":"провести время","zh":"度过时间","pos":"短语"},{"ru":"обязательно","zh":"一定","pos":"副词"}]}]},{"id":"b2","name":"B2","desc":"提高：抽象话题、论证与书面语色彩，句长和语速接近真实材料","texts":[{"id":"b2-1","title":"Как учить языки","titleZh":"怎么学语言","blurb":"天赋和坚持哪个重要，为什么要说出口","sentences":[{"ru":"Многие уверены, что для изучения языка нужен особый талант.","zh":"很多人相信，学语言需要特别的天赋。"},{"ru":"На мой взгляд, гораздо важнее регулярность, чем способности.","zh":"在我看来，规律性比天赋重要得多。"},{"ru":"Двадцать минут каждый день дают больше, чем три часа раз в неделю.","zh":"每天二十分钟，比一周三小时收获更大。"},{"ru":"Однако одного повторения недостаточно: важно понимать смысл.","zh":"不过只重复是不够的：理解意思才重要。"},{"ru":"Поэтому я советую слушать тексты, которые действительно интересны.","zh":"所以我建议听那些真正让你感兴趣的文本。"},{"ru":"Мозг лучше запоминает то, что связано с эмоциями и личным опытом.","zh":"大脑更容易记住和情绪、个人经历有关的东西。"},{"ru":"Кроме того, необходимо говорить вслух, даже если вы ошибаетесь.","zh":"此外，必须开口说，即使会说错。"},{"ru":"Ошибка — не провал, а информация о том, что ещё не усвоено.","zh":"错误不是失败，而是关于哪部分还没掌握的信息。"},{"ru":"Если вы уважаете носителей языка, они обычно помогают охотнее.","zh":"如果你尊重母语者，他们通常更乐意帮你。"}],"vocab":[{"ru":"изучение","zh":"学习、研究","pos":"名词"},{"ru":"талант","zh":"天赋","pos":"名词"},{"ru":"на мой взгляд","zh":"在我看来","pos":"短语"},{"ru":"регулярность","zh":"规律性、经常性","pos":"名词"},{"ru":"способности","zh":"能力","pos":"名词"},{"ru":"усвоить","zh":"掌握、吸收","pos":"动词"},{"ru":"носитель языка","zh":"母语者","pos":"短语"},{"ru":"охотно","zh":"乐意地","pos":"副词"}]},{"id":"b2-2","title":"Город и экология","titleZh":"城市与环保","blurb":"垃圾、分类回收，以及每个人能做的小选择","sentences":[{"ru":"Современный город производит огромное количество отходов.","zh":"现代城市产生大量垃圾。"},{"ru":"Каждый день миллионы людей покупают товары в упаковке из пластика.","zh":"每天有几百万人购买塑料包装的商品。"},{"ru":"Большая часть этого мусора оказывается на свалках, а не в переработке.","zh":"这些垃圾大部分进了垃圾场，而不是被回收。"},{"ru":"Власти некоторых городов вводят раздельный сбор отходов.","zh":"一些城市的政府开始推行垃圾分类收集。"},{"ru":"Однако без привычки самих жителей такие меры работают плохо.","zh":"但如果没有居民自己的习惯，这些措施效果很差。"},{"ru":"Я считаю, что начинать нужно с простых решений на уровне дома.","zh":"我认为应该从家里层面的简单决定开始。"},{"ru":"Например, можно отказаться от одноразовых пакетов и бутылок.","zh":"比如可以不用一次性袋子和瓶子。"},{"ru":"Экология — это не только политика, но и ежедневный выбор каждого.","zh":"环保不只是政策，也是每个人每天的选择。"},{"ru":"Небольшие изменения становятся заметными, когда их делают тысячи людей.","zh":"当成千上万的人这样做时，小小的改变就会变得明显。"}],"vocab":[{"ru":"окружающая среда","zh":"环境","pos":"短语"},{"ru":"отходы","zh":"废弃物","pos":"名词"},{"ru":"упаковка","zh":"包装","pos":"名词"},{"ru":"свалка","zh":"垃圾场","pos":"名词"},{"ru":"переработка","zh":"回收加工","pos":"名词"},{"ru":"раздельный сбор","zh":"分类收集","pos":"短语"},{"ru":"одноразовый","zh":"一次性的","pos":"形容词"},{"ru":"отказаться от","zh":"放弃、不用","pos":"短语"}]},{"id":"b2-3","title":"Технологии и общение","titleZh":"科技与交流","blurb":"手机改变了交往方式，也带来了新的问题","sentences":[{"ru":"Смартфон изменил то, как люди встречаются, работают и учатся.","zh":"智能手机改变了人们相识、工作和学习的方式。"},{"ru":"Сегодня можно за минуту связаться с человеком на другом конце мира.","zh":"今天，一分钟内就能联系上世界另一端的人。"},{"ru":"Но скорость общения не всегда означает его глубину.","zh":"但交流的速度并不总意味着深度。"},{"ru":"Сообщения в мессенджерах часто заменяют личный разговор.","zh":"即时通讯里的消息常常取代了面对面的谈话。"},{"ru":"Многие замечают, что без телефона чувствуют тревогу.","zh":"很多人发现，没有手机会感到不安。"},{"ru":"Психологи советуют время от времени устраивать себе цифровой отдых.","zh":"心理学家建议偶尔给自己安排一段“数码休息”。"},{"ru":"Тем не менее техника даёт и новые возможности для знакомств.","zh":"不过技术也为结识新朋友提供了新的可能。"},{"ru":"Например, люди находят друзей по интересам в разных странах.","zh":"比如，人们在不同国家找到志同道合的朋友。"},{"ru":"Вопрос не в самих технологиях, а в том, как мы ими пользуемся.","zh":"问题不在技术本身，而在我们如何使用它。"}],"vocab":[{"ru":"связаться с","zh":"联系上","pos":"短语"},{"ru":"глубина","zh":"深度","pos":"名词"},{"ru":"мессенджер","zh":"即时通讯软件","pos":"名词"},{"ru":"заменять","zh":"代替","pos":"动词"},{"ru":"тревога","zh":"焦虑、不安","pos":"名词"},{"ru":"время от времени","zh":"不时地、偶尔","pos":"短语"},{"ru":"тем не менее","zh":"然而","pos":"短语"},{"ru":"пользоваться","zh":"使用","pos":"动词"}]},{"id":"b2-4","title":"Культура и традиции","titleZh":"文化与习俗","blurb":"做客、送礼、待客之道，以及习惯的力量","sentences":[{"ru":"Традиции помогают человеку понять, частью какого мира он является.","zh":"传统帮助人理解自己属于哪个世界。"},{"ru":"В России уважают семейные праздники и приглашения в гости.","zh":"在俄罗斯，人们重视家庭节日和请客做客。"},{"ru":"Если вас пригласили домой, принято приходить с небольшим подарком.","zh":"如果别人请你去家里，通常要带一份小礼物。"},{"ru":"На стол часто ставят много блюд, чтобы никто не остался голодным.","zh":"桌上常常摆很多菜，好让谁都不会饿着。"},{"ru":"Иностранцу может показаться, что это слишком щедро.","zh":"外国人可能会觉得这太丰盛了。"},{"ru":"Но за таким гостеприимством стоит искреннее желание заботиться.","zh":"但这种好客背后是真心想照顾别人。"},{"ru":"Иногда мы сами не замечаем, насколько глубоко усвоили обычаи.","zh":"有时我们自己都没注意到，习俗被我们吸收得有多深。"},{"ru":"Культура меняется, но некоторые привычки остаются на всю жизнь.","zh":"文化在变，但有些习惯会保留一辈子。"},{"ru":"Понимание других традиций делает общение более спокойным и честным.","zh":"理解别的传统能让交流更从容、更真诚。"}],"vocab":[{"ru":"традиция","zh":"传统","pos":"名词"},{"ru":"приглашение в гости","zh":"邀请做客","pos":"短语"},{"ru":"принято","zh":"（按习惯）应该","pos":"短语"},{"ru":"блюдо","zh":"一道菜、盘子","pos":"名词"},{"ru":"щедрый","zh":"慷慨的、丰盛的","pos":"形容词"},{"ru":"гостеприимство","zh":"好客","pos":"名词"},{"ru":"обычай","zh":"风俗","pos":"名词"},{"ru":"привычка","zh":"习惯","pos":"名词"}]}]}]};
+/*CONTENT-END*/
+
+var STORE = 'diktant.v1';
+var state = { level: 'a1', textId: null, idx: 0, slow: false, seen: {}, typed: {}, done: {}, open: {} };
+
+function load() {
+  try {
+    var raw = localStorage.getItem(STORE);
+    if (!raw) return;
+    var s = JSON.parse(raw);
+    if (s && typeof s === 'object') {
+      if (s.level) state.level = s.level;
+      if (s.typed) state.typed = s.typed;
+      if (s.seen) state.seen = s.seen;
+      if (s.done) state.done = s.done;
+      if (typeof s.slow === 'boolean') state.slow = s.slow;
+      if (s.pos && s.pos[state.level]) state.lastPos = s.pos;
+    }
+  } catch (e) {}
+}
+function save() {
+  try {
+    localStorage.setItem(STORE, JSON.stringify({
+      level: state.level, slow: state.slow, typed: state.typed, seen: state.seen, done: state.done,
+      pos: state.lastPos || {}
+    }));
+  } catch (e) {}
+}
+
+function $(id) { return document.getElementById(id); }
+function show(screen) {
+  var list = document.querySelectorAll('.screen');
+  for (var i = 0; i < list.length; i++) list[i].classList.remove('on');
+  $(screen).classList.add('on');
+  window.scrollTo(0, 0);
+}
+function curLevel() {
+  for (var i = 0; i < CONTENT.levels.length; i++) if (CONTENT.levels[i].id === state.level) return CONTENT.levels[i];
+  return CONTENT.levels[0];
+}
+function curText() {
+  var lv = curLevel();
+  for (var i = 0; i < lv.texts.length; i++) if (lv.texts[i].id === state.textId) return lv.texts[i];
+  return null;
+}
+function audioSrc(t, i) { return 'audio/' + t.id + '/s' + (i + 1) + '.mp3'; }
+function totalChars(t) {
+  var n = 0;
+  for (var i = 0; i < t.sentences.length; i++) n += t.sentences[i].ru.length;
+  return n;
+}
+function estSeconds(t) { return Math.round(totalChars(t) / 13); }
+
+/* ---------------- home ---------------- */
+function renderHome() {
+  var tabs = $('tabs'), i;
+  tabs.innerHTML = '';
+  for (i = 0; i < CONTENT.levels.length; i++) {
+    (function (lv) {
+      var b = document.createElement('button');
+      b.className = 'tab' + (lv.id === state.level ? ' on' : '');
+      b.textContent = lv.name;
+      b.onclick = function () { state.level = lv.id; save(); renderHome(); };
+      tabs.appendChild(b);
+    })(CONTENT.levels[i]);
+  }
+  var lv = curLevel();
+  $('leveldesc').textContent = lv.desc;
+  var list = $('textlist');
+  list.innerHTML = '';
+  for (i = 0; i < lv.texts.length; i++) {
+    (function (t) {
+      var c = document.createElement('div');
+      c.className = 'card';
+      var badges = '';
+      if (state.done[t.id]) badges += '<span class="done">已练完</span>';
+      if (state.lastPos && state.lastPos[t.id] && !state.done[t.id]) badges += '<span class="cont">练到第 ' + (state.lastPos[t.id] + 1) + ' 句</span>';
+      c.innerHTML =
+        '<h3>' + esc(t.title) + ' ' + badges + '</h3>' +
+        '<div class="zh">' + esc(t.titleZh) + ' · ' + esc(t.blurb) + '</div>' +
+        '<div class="meta"><span>' + t.sentences.length + ' 句</span><span>约 ' + estSeconds(t) + ' 秒</span><span>' + t.vocab.length + ' 个生词</span></div>';
+      c.onclick = function () { openText(t.id); };
+      list.appendChild(c);
+    })(lv.texts[i]);
+  }
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  });
+}
+
+/* ---------------- practice ---------------- */
+var audio = null;
+function audioEl() {
+  if (!audio) {
+    audio = new Audio();
+    audio.preload = 'auto';
+    audio.addEventListener('ended', function () { $('btnPlay').classList.remove('playing'); $('btnPlay').textContent = '▶'; });
+  }
+  return audio;
+}
+function openText(id) {
+  state.textId = id;
+  var t = curText();
+  var start = (state.lastPos && state.lastPos[id]) ? state.lastPos[id] : 0;
+  if (start >= t.sentences.length) start = 0;
+  state.idx = start;
+  show('practice');
+  renderPractice();
+  playCurrent();
+}
+function renderPractice() {
+  var t = curText();
+  var i = state.idx;
+  var s = t.sentences[i];
+  $('pTitle').textContent = t.title;
+  $('pSub').textContent = t.titleZh + ' · 第 ' + (i + 1) + ' / ' + t.sentences.length + ' 句';
+  $('pProg').style.width = ((i) / t.sentences.length * 100) + '%';
+  var dots = $('dots');
+  dots.innerHTML = '';
+  for (var k = 0; k < t.sentences.length; k++) {
+    (function (n) {
+      var d = document.createElement('button');
+      d.className = 'dot' + (n === i ? ' cur' : '') + (state.seen[t.id + ':' + n] ? ' seen' : '');
+      d.setAttribute('aria-label', '第' + (n + 1) + '句');
+      d.onclick = function () { goto_($('input').value, n); };
+      dots.appendChild(d);
+    })(k);
+  }
+  var box = $('revealBox');
+  box.innerHTML = '';
+  delete state.open[t.id + ':' + i];
+  var seen = state.seen[t.id + ':' + i];
+  var ta = $('input');
+  var saved = state.typed[t.id + ':' + i];
+  ta.value = (typeof saved === 'string') ? saved : '';
+  $('btnReveal').textContent = '看原文';
+  $('btnNext').textContent = (i === t.sentences.length - 1) ? '完成' : '下一句';
+  $('btnSlow').className = 'pill' + (state.slow ? ' on' : '');
+  $('foldZh').open = false;
+  renderZh(t); renderVocab(t);
+  $('pFoot').textContent = '共 ' + t.sentences.length + ' 句 · ' + t.vocab.length + ' 个生词';
+  try { ta.focus({ preventScroll: false }); } catch (e) { ta.focus(); }
+}
+function revealHTML(t, i) {
+  var s = t.sentences[i];
+  var mine = state.typed[t.id + ':' + i] || '';
+  return '<div class="reveal">' +
+    '<div class="lbl">你写的</div>' +
+    '<div class="mine">' + (mine.trim() ? esc(mine) : '（空）') + '</div>' +
+    '<div class="lbl">原文</div>' +
+    '<div class="ru">' + esc(s.ru) + '</div>' +
+    '<div class="zh">' + esc(s.zh) + '</div>' +
+    '</div>';
+}
+function renderZh(t) {
+  var h = '';
+  for (var i = 0; i < t.sentences.length; i++) h += '<p><b>' + (i + 1) + '.</b> ' + esc(t.sentences[i].zh) + '</p>';
+  $('zhBody').innerHTML = h;
+}
+function renderVocab(t) {
+  var h = '';
+  for (var i = 0; i < t.vocab.length; i++) {
+    var v = t.vocab[i];
+    h += '<div class="vrow"><div class="vru">' + esc(v.ru) + '</div><div class="vzh">' + esc(v.zh) + '</div><div class="vpos">' + esc(v.pos || '') + '</div></div>';
+  }
+  $('vocabBody').innerHTML = h;
+}
+
+function playCurrent() {
+  var t = curText();
+  if (!t) return;
+  var a = audioEl();
+  a.pause();
+  a.src = audioSrc(t, state.idx);
+  a.playbackRate = state.slow ? 0.68 : 1;
+  a.currentTime = 0;
+  var p = a.play();
+  $('btnPlay').classList.add('playing');
+  $('btnPlay').textContent = '❚❚';
+  if (p && p.catch) p.catch(function () { $('btnPlay').classList.remove('playing'); $('btnPlay').textContent = '▶'; });
+}
+function rememberTyped() {
+  var t = curText();
+  if (!t) return;
+  state.typed[t.id + ':' + state.idx] = $('input').value;
+  if (!state.lastPos) state.lastPos = {};
+  state.lastPos[t.id] = state.idx;
+  save();
+}
+function goto_(typedNow, n) {
+  rememberTyped();
+  state.idx = n;
+  renderPractice();
+  playCurrent();
+}
+function toggleReveal() {
+  var t = curText();
+  var i = state.idx;
+  var key = t.id + ':' + i;
+  var box = $('revealBox');
+  if (state.open[key]) {
+    delete state.open[key];
+    box.innerHTML = '';
+    $('btnReveal').textContent = '看原文';
+    return;
+  }
+  state.open[key] = 1;
+  state.seen[key] = 1;
+  save();
+  box.innerHTML = revealHTML(t, i);
+  $('btnReveal').textContent = '收起原文';
+  var dot = $('dots').children[i];
+  if (dot) dot.classList.add('seen');
+}
+function nextSentence() {
+  var t = curText();
+  rememberTyped();
+  if (state.idx >= t.sentences.length - 1) { finish(); return; }
+  state.idx++;
+  renderPractice();
+  playCurrent();
+}
+function prevSentence() {
+  if (state.idx <= 0) return;
+  rememberTyped();
+  state.idx--;
+  renderPractice();
+  playCurrent();
+}
+function finish() {
+  var t = curText();
+  state.done[t.id] = 1;
+  if (state.lastPos) state.lastPos[t.id] = 0;
+  save();
+  var h = '';
+  for (var i = 0; i < t.sentences.length; i++) {
+    h += '<div class="sentline"><div class="n">第 ' + (i + 1) + ' 句' + (state.seen[t.id + ':' + i] ? '' : ' · 没看原文') + '</div>' +
+      '<div class="ru">' + esc(t.sentences[i].ru) + '</div>' +
+      '<div class="zh">' + esc(t.sentences[i].zh) + '</div></div>';
+  }
+  $('doneList').innerHTML = h;
+  $('doneSub').textContent = t.title + ' · ' + t.titleZh + '（' + t.sentences.length + ' 句）';
+  var v = '';
+  for (var j = 0; j < t.vocab.length; j++) {
+    v += '<div class="vrow"><div class="vru">' + esc(t.vocab[j].ru) + '</div><div class="vzh">' + esc(t.vocab[j].zh) + '</div><div class="vpos">' + esc(t.vocab[j].pos || '') + '</div></div>';
+  }
+  $('doneVocab').innerHTML = v;
+  show('done');
+}
+function backHome() {
+  rememberTyped();
+  var t = curText();
+  if (t && state.lastPos && state.seen && Object.keys(state.seen).length) {
+    var anySeen = false;
+    for (var k in state.seen) if (k.indexOf(t.id + ':') === 0) anySeen = true;
+    if (anySeen) state.done[t.id] = state.done[t.id] || 0;
+  }
+  save();
+  renderHome();
+  show('home');
+}
+
+/* ---------------- wiring ---------------- */
+load();
+renderHome();
+
+$('btnPlay').onclick = function () {
+  var a = audioEl();
+  if (!a.paused) { a.pause(); $('btnPlay').classList.remove('playing'); $('btnPlay').textContent = '▶'; return; }
+  playCurrent();
+};
+$('btnSlow').onclick = function () {
+  state.slow = !state.slow;
+  save();
+  $('btnSlow').className = 'pill' + (state.slow ? ' on' : '');
+  var a = audioEl();
+  a.playbackRate = state.slow ? 0.68 : 1;
+};
+$('btnPrev').onclick = function () { prevSentence(); };
+$('btnNextInline').onclick = function () { nextSentence(); };
+$('btnReveal').onclick = function () { toggleReveal(); };
+$('btnNext').onclick = function () { nextSentence(); };
+$('btnBack').onclick = function () { backHome(); };
+$('btnDots').onclick = function () {
+  var t = curText();
+  var n = prompt('跳到第几句？（1-' + t.sentences.length + '）', String(state.idx + 1));
+  if (!n) return;
+  var v = parseInt(n, 10);
+  if (!v || v < 1 || v > t.sentences.length) return;
+  goto_(null, v - 1);
+};
+$('input').addEventListener('input', function () {
+  var t = curText();
+  if (!t) return;
+  state.typed[t.id + ':' + state.idx] = $('input').value;
+  if (!state.lastPos) state.lastPos = {};
+  state.lastPos[t.id] = state.idx;
+  save();
+});
+$('btnAgain').onclick = function () {
+  state.idx = 0;
+  state.seen = {};
+  state.typed = {};
+  state.open = {};
+  state.done[state.textId] = 1;
+  save();
+  show('practice');
+  renderPractice();
+  playCurrent();
+};
+$('btnBackHome').onclick = function () { renderHome(); show('home'); };
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
