@@ -206,6 +206,29 @@ body{
 .lvsec .lvtx b{display:block;font-size:14.5px;color:var(--ink);line-height:1.25}
 .lvsec .lvtx span{display:block;font-size:12.5px;color:var(--ink-3);margin-top:1px}
 .lvsec .line{flex:1;height:1px;background:var(--line)}
+
+/* ---------- 我的单词 ---------- */
+.wchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.wchip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 10px;font-size:13px;
+  color:var(--ink);cursor:pointer;font-family:inherit;display:inline-flex;gap:5px;align-items:center;line-height:1.35}
+.wchip b{font-weight:600}
+.wchip span{color:var(--ink-3);font-size:12px}
+.wchip:active{background:var(--blue-l)}
+.wordbtns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.wordbtns .entry{flex:1 1 0;min-width:140px}
+#wdZh{margin:8px 0 0;text-align:center;color:var(--ink-2);font-size:13.5px;min-height:20px}
+.wdres{margin:12px 0 0;font-size:15px;line-height:1.55}
+.wdres.ok{color:#0f766e}
+.wdres.no{color:#b91c1c}
+.wdres b{font-weight:700}
+.wdres .you{color:var(--ink-3);font-size:13px;margin-top:3px;font-weight:400}
+.wdex{margin:12px 0 0}
+.wdex .ex{padding:9px 0;border-top:1px dashed var(--line);font-size:14px;line-height:1.5}
+.wdex .ex .zh{color:var(--ink-2);font-size:13px;margin-top:2px}
+.wdex .ex button{border:0;background:var(--blue-l);color:var(--blue-d);border-radius:8px;padding:3px 9px;
+  font-size:12.5px;font-weight:700;margin-right:7px;font-family:inherit;cursor:pointer}
+.wdex .replay{margin-top:12px;width:100%;border:1px solid var(--line);background:#fff;border-radius:12px;
+  padding:11px;font-size:14px;font-weight:700;color:var(--blue-d);font-family:inherit;cursor:pointer}
 </style>
 </head>
 <body>
@@ -222,6 +245,15 @@ body{
       <h2>我的短文 <span class="cnt" id="customCnt"></span></h2>
       <button class="addcard" id="btnAdd">＋ 添加短文（粘贴俄语文章，用手机语音朗读）</button>
       <div id="customList"></div>
+    </div>
+    <div class="mine-sec">
+      <h2>我的单词 <span class="cnt" id="wordCnt"></span></h2>
+      <button class="addcard" id="btnAddWords">＋ 添加单词（把每天学的词粘进来，可带中文）</button>
+      <div class="wordbtns" id="wordBtns" style="display:none">
+        <button class="entry" id="btnWordDict">单词听写</button>
+        <button class="entry dlg" id="btnWordDlg">编一段对话</button>
+      </div>
+      <div class="wchips" id="wordChips"></div>
     </div>
     <div class="tabs" id="tabs"></div>
     <div class="leveldesc" id="leveldesc"></div>
@@ -299,6 +331,55 @@ body{
   </div></div>
 </section>
 
+<!-- ================= WORDS ================= -->
+<section class="screen" id="words">
+  <div class="bar">
+    <div class="in">
+      <button class="iconbtn" id="btnWordsBack" aria-label="返回">‹</button>
+      <div class="ttl"><b>我的单词</b><span>一行一个词，中文可以用「—」隔开</span></div>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="field">
+      <label>今天的单词</label>
+      <textarea id="wordsInput" placeholder="стол — 桌子&#10;читать — 读&#10;красивый&#10;（只有俄语词也行，一行一个）" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off"></textarea>
+    </div>
+    <div class="hint" id="wordsHint">保存后可以「单词听写」（听音写词、当场判对错），也可以「编一段对话」（把你的词编成双人小对话，用来跟读）。</div>
+    <div class="foot" id="wordsFoot"></div>
+  </div>
+  <div class="bottom"><div class="in">
+    <button class="btn ghost" id="btnWordsClear">清空</button>
+    <button class="btn primary" id="btnWordsSave">保存</button>
+  </div></div>
+</section>
+
+<!-- ================= WORD DICTATION ================= -->
+<section class="screen" id="wdict">
+  <div class="bar">
+    <div class="in">
+      <button class="iconbtn" id="btnWDBack" aria-label="返回">‹</button>
+      <div class="ttl"><b>单词听写</b><span id="wdSub">—</span></div>
+      <span class="pill" id="wdProg">1 / 1</span>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="player">
+      <button class="playbig" id="btnWDPlay" aria-label="播放">▶</button>
+    </div>
+    <div class="hint" id="wdZh"></div>
+    <div class="typebox">
+      <textarea id="wdInput" placeholder="写出你听到的俄语单词…" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off"></textarea>
+      <div class="hint">听不清就多点几下播放键；写完点「检查」。</div>
+    </div>
+    <div class="wdres" id="wdRes"></div>
+    <div class="wdex" id="wdEx"></div>
+  </div>
+  <div class="bottom"><div class="in">
+    <button class="btn ghost" id="btnWDReveal">看答案</button>
+    <button class="btn primary" id="btnWDNext">检查</button>
+  </div></div>
+</section>
+
 <!-- ================= DONE ================= -->
 <section class="screen" id="done">
   <div class="wrap">
@@ -325,7 +406,7 @@ var CONTENT = {"version":6,"kind":"scene-texts","chapters":[{"id":"c1","name":"�
 var STORE = 'diktant.v2';
 var CUSTOM_KEY = 'diktant.custom.v1';
 var SPEEDS = [0.6, 0.75, 0.9, 1, 1.25, 1.5];
-var state = { ch: 'c7', textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {}, custom: [] };
+var state = { ch: 'c7', textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {}, custom: [], words: [] };
 
 function loadCustom() {
   try {
@@ -347,6 +428,7 @@ function saveCustom() {
 
 function load() {
   state.custom = loadCustom();
+  loadWords();
   try {
     var raw = localStorage.getItem(STORE);
     if (!raw) return;
@@ -414,6 +496,341 @@ function totalChars(t) {
 }
 function estSeconds(t) { return t.sec ? Math.round(t.sec) : Math.round(totalChars(t) / 13); }
 
+/* ---------------- 我的单词 ---------------- */
+var WORDS_KEY = 'diktant.words.v1';
+var wd = { list: [], i: 0, ok: 0, bad: [], phase: 'ask' };
+function loadWords() {
+  state.words = [];
+  try {
+    var a = JSON.parse(localStorage.getItem(WORDS_KEY) || '[]');
+    if (!Array.isArray(a)) return;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] && a[i].ru) state.words.push({ ru: String(a[i].ru), zh: String(a[i].zh || '') });
+    }
+  } catch (e) { state.words = []; }
+}
+function saveWordsStore() {
+  try { localStorage.setItem(WORDS_KEY, JSON.stringify(state.words)); } catch (e) {}
+}
+/* 判对错用：小写、ё→е、去掉重音符号和所有非俄文字母 */
+function normWord(s) {
+  return String(s == null ? '' : s).toLowerCase().replace(/ё/g, 'е')
+    .replace(/[\u0301\u00a0]/g, '').replace(/[^а-я]/g, '');
+}
+/* 粘贴解析：一行一个；「стол — 桌子」「стол, 桌子」「1. стол 桌子」都认 */
+function parseWords(txt) {
+  var out = [], seen = {}, lines = String(txt || '').split(/\r?\n/);
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].replace(/^\s*\d+[.)、]\s*/, '').trim();
+    if (!line) continue;
+    var ru = line, zh = '';
+    var m = line.match(/^(.+?)\s*(?:[—–\-:：\t,，]|\s{2,})\s*(.+)$/);
+    if (m && m[1] && m[2]) { ru = m[1].trim(); zh = m[2].trim(); }
+    if (!/[А-Яа-яЁё]/.test(ru)) continue;
+    var key = normWord(ru);
+    if (!key || seen[key]) continue;
+    seen[key] = 1;
+    out.push({ ru: ru, zh: zh });
+  }
+  return out;
+}
+function renderWords() {
+  var n = state.words.length, i;
+  $('wordCnt').textContent = n ? '（' + n + ' 个）' : '';
+  $('wordBtns').style.display = n ? 'flex' : 'none';
+  if (n) {
+    $('btnWordDict').textContent = '单词听写 · ' + n + ' 个';
+    $('btnWordDlg').textContent = '编一段对话';
+  }
+  var box = $('wordChips');
+  if (!box) return;
+  box.innerHTML = '';
+  for (i = 0; i < n && i < 40; i++) {
+    (function (w) {
+      var b = document.createElement('button');
+      b.className = 'wchip';
+      b.innerHTML = '<b>' + esc(w.ru) + '</b>' + (w.zh ? '<span>' + esc(w.zh) + '</span>' : '');
+      b.onclick = function () { speak(w.ru, 0.85); };
+      box.appendChild(b);
+    })(state.words[i]);
+  }
+  if (n > 40) {
+    var more = document.createElement('span');
+    more.className = 'wchip';
+    more.textContent = '还有 ' + (n - 40) + ' 个';
+    box.appendChild(more);
+  }
+}
+function openWords() {
+  var lines = [];
+  for (var i = 0; i < state.words.length; i++) {
+    lines.push(state.words[i].zh ? state.words[i].ru + ' — ' + state.words[i].zh : state.words[i].ru);
+  }
+  $('wordsInput').value = lines.join('\n');
+  $('wordsFoot').textContent = state.words.length ? '现在共 ' + state.words.length + ' 个词' : '';
+  show('words');
+}
+function saveWordsFromInput() {
+  var list = parseWords($('wordsInput').value);
+  if (!list.length) { $('wordsFoot').textContent = '没读到俄语单词，看看是不是粘错了。'; return; }
+  state.words = list;
+  saveWordsStore();
+  renderWords();
+  show('home');
+}
+function shuffleList(a) {
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+function startWordDict(list) {
+  var src = (list && list.length) ? list.slice() : state.words.slice();
+  if (!src.length) return;
+  wd = { list: shuffleList(src), i: 0, ok: 0, bad: [], phase: 'ask' };
+  show('wdict');
+  renderWD(true);
+}
+function renderWD(autoPlay) {
+  var w = wd.list[wd.i];
+  if (!w) return;
+  wd.phase = 'ask';
+  $('wdSub').textContent = w.zh ? '中文提示：' + w.zh : '听发音，写出这个单词';
+  $('wdProg').textContent = (wd.i + 1) + ' / ' + wd.list.length;
+  $('wdZh').textContent = w.zh ? '（' + w.zh + '）' : '';
+  $('wdInput').value = '';
+  $('wdInput').focus();
+  $('wdRes').className = 'wdres';
+  $('wdRes').innerHTML = '';
+  $('wdEx').innerHTML = '';
+  $('btnWDNext').textContent = '检查';
+  $('btnWDReveal').textContent = '看答案';
+  if (autoPlay) playWord();
+}
+function playWord() {
+  var w = wd.list[wd.i];
+  if (w) speak(w.ru, 0.9);
+}
+/* 语料里含这个词的真句（含真人录音） */
+function hasWordForm(ru, key) {
+  if (!key) return false;
+  var t = String(ru || '').toLowerCase().replace(/ё/g, 'е').replace(/[\u0301]/g, '');
+  var re = new RegExp('(^|[^а-я])' + key + '[а-я]*(?=$|[^а-я])');
+  return re.test(t);
+}
+var corpusCache = null;
+function corpusList() {
+  if (corpusCache) return corpusCache;
+  corpusCache = [];
+  for (var i = 0; i < CONTENT.chapters.length; i++) {
+    var ch = CONTENT.chapters[i];
+    for (var j = 0; j < ch.scenes.length; j++) {
+      var ts = ch.scenes[j].texts || [];
+      for (var k = 0; k < ts.length; k++) {
+        var t = ts[k];
+        for (var m = 0; m < t.sentences.length; m++) {
+          corpusCache.push({ ru: t.sentences[m].ru, zh: t.sentences[m].zh, who: t.sentences[m].who, tid: t.id, idx: m });
+        }
+      }
+    }
+  }
+  return corpusCache;
+}
+function findExamples(word, limit) {
+  var key = normWord(word).replace(/^(.{4}).*$/, '$1'), out = [];
+  if (key.length < 3) return out;
+  var arr = corpusList();
+  var full = normWord(word);
+  for (var i = 0; i < arr.length && out.length < (limit || 2); i++) {
+    if (hasWordForm(arr[i].ru, full) || hasWordForm(arr[i].ru, key)) out.push(arr[i]);
+  }
+  return out;
+}
+function wdShowExamples(w) {
+  var box = $('wdEx');
+  box.innerHTML = '';
+  var ex = findExamples(w.ru, 3);
+  if (!ex.length) return;
+  var head = document.createElement('div');
+  head.className = 'hint';
+  head.textContent = '这些课文里出现过它，跟着真句再听一遍：';
+  box.appendChild(head);
+  for (var i = 0; i < ex.length; i++) {
+    (function (e) {
+      var d = document.createElement('div');
+      d.className = 'ex';
+      var b = document.createElement('button');
+      b.textContent = '▶';
+      b.onclick = function () {
+        var a = audioEl();
+        try { a.pause(); } catch (err) {}
+        a.src = audioSrc({ id: e.tid }, e.idx);
+        setRate(a, state.speed);
+        try { a.currentTime = 0; } catch (err) {}
+        var p = a.play();
+        if (p && p.catch) p.catch(function () {});
+      };
+      d.appendChild(b);
+      var s = document.createElement('span');
+      s.innerHTML = (e.who ? '<span class="who">' + esc(e.who) + '</span> ' : '') + esc(e.ru) +
+        (e.zh ? '<div class="zh">' + esc(e.zh) + '</div>' : '');
+      d.appendChild(s);
+      box.appendChild(d);
+    })(ex[i]);
+  }
+}
+function wdPress() {
+  if (wd.phase === 'end') { startWordDict(state.words); return; }
+  if (wd.phase === 'answer') { wdAdvance(); return; }
+  var w = wd.list[wd.i];
+  if (!w) return;
+  var typed = $('wdInput').value;
+  var ok = normWord(typed).length > 0 && normWord(typed) === normWord(w.ru);
+  wd.phase = 'answer';
+  if (ok) {
+    wd.ok++;
+    $('wdRes').className = 'wdres ok';
+    $('wdRes').innerHTML = '✓ 对了：<b>' + esc(w.ru) + '</b>';
+  } else {
+    wd.bad.push(w);
+    $('wdRes').className = 'wdres no';
+    $('wdRes').innerHTML = '✗ 正确写法：<b>' + esc(w.ru) + '</b>' +
+      (typed ? '<div class="you">你写的是：' + esc(typed) + '</div>' : '');
+  }
+  $('btnWDNext').textContent = (wd.i + 1 < wd.list.length) ? '下一个' : '完成';
+  $('btnWDReveal').textContent = '再听一遍';
+  wdShowExamples(w);
+}
+function wdReveal() {
+  if (wd.phase === 'end') { show('home'); return; }
+  if (wd.phase === 'answer') { playWord(); return; }
+  var w = wd.list[wd.i];
+  if (!w) return;
+  wd.phase = 'answer';
+  wd.bad.push(w);
+  $('wdRes').className = 'wdres no';
+  $('wdRes').innerHTML = '正确写法：<b>' + esc(w.ru) + '</b>';
+  $('btnWDNext').textContent = (wd.i + 1 < wd.list.length) ? '下一个' : '完成';
+  $('btnWDReveal').textContent = '再听一遍';
+  wdShowExamples(w);
+}
+function wdAdvance() {
+  if (wd.i + 1 < wd.list.length) { wd.i++; renderWD(true); return; }
+  wdDone();
+}
+function wdDone() {
+  wd.phase = 'end';
+  var n = wd.list.length, bad = wd.bad;
+  $('wdSub').textContent = '这一轮结束了';
+  $('wdProg').textContent = wd.ok + ' / ' + n;
+  $('wdZh').textContent = '';
+  $('wdInput').value = '';
+  $('wdRes').className = 'wdres' + (bad.length ? '' : ' ok');
+  $('wdRes').innerHTML = '这一轮 ' + n + ' 个词，对了 <b>' + wd.ok + '</b> 个' +
+    (bad.length ? '，下面 ' + bad.length + ' 个再听一遍。' : '，全对！');
+  var box = $('wdEx');
+  box.innerHTML = '';
+  for (var i = 0; i < bad.length; i++) {
+    (function (w) {
+      var d = document.createElement('div');
+      d.className = 'ex';
+      var b = document.createElement('button');
+      b.textContent = '▶';
+      b.onclick = function () { speak(w.ru, 0.85); };
+      d.appendChild(b);
+      var s = document.createElement('span');
+      s.innerHTML = '<b>' + esc(w.ru) + '</b>' + (w.zh ? ' · ' + esc(w.zh) : '');
+      d.appendChild(s);
+      box.appendChild(d);
+    })(bad[i]);
+  }
+  if (bad.length) {
+    var btn = document.createElement('button');
+    btn.className = 'wdex replay';
+    btn.textContent = '只练这 ' + bad.length + ' 个错词';
+    btn.onclick = function () { startWordDict(bad.slice()); };
+    box.appendChild(btn);
+  }
+  $('btnWDNext').textContent = '再听一轮';
+  $('btnWDReveal').textContent = '返回首页';
+}
+
+/* ---- 编一段对话：用你的词套常用句型，双人交替（离线，不联网） ---- */
+var DLG_FRAMES = {
+  n: [
+    ['У тебя есть W?', '你有 W 吗？', 'Да, вот W.', '有，这就是 W。'],
+    ['Где W?', 'W 在哪儿？', 'W здесь.', 'W 在这儿。'],
+    ['Это W?', '这是 W 吗？', 'Да, это W.', '对，这是 W。'],
+    ['Тебе нравится W?', '你喜欢 W 吗？', 'Да, очень нравится.', '喜欢，很喜欢。'],
+    ['Ты знаешь W?', '你知道 W 吗？', 'Конечно, знаю W.', '当然，我知道 W。']
+  ],
+  v: [
+    ['Ты любишь W?', '你喜欢 W 吗？', 'Да, я очень люблю W.', '是的，我很喜欢 W。'],
+    ['Ты хочешь W?', '你想 W 吗？', 'Да, хочу W.', '想。'],
+    ['Надо W?', '需要 W 吗？', 'Да, надо W.', '需要。'],
+    ['Когда ты будешь W?', '你什么时候 W？', 'Завтра буду W.', '明天。'],
+    ['Можно W?', '可以 W 吗？', 'Конечно, можно W.', '当然可以。']
+  ]
+};
+var DLG_META = [
+  ['Что значит W?', 'W 是什么意思？', 'Это Z.', '意思是 Z。'],
+  ['Как переводится W?', 'W 怎么翻译？', 'По-китайски W — это Z.', '中文里 W 是 Z。']
+];
+function posGuess(w) {
+  var s = String(w || '').toLowerCase();
+  if (/(ть|ться|ти)$/.test(s)) return 'v';
+  if (/(ый|ий|ой|ая|яя|ое|ее|ые|ие)$/.test(s)) return 'a';
+  return 'n';
+}
+function makeDialogueLines(chunk, seed) {
+  var lines = [], i;
+  lines.push({ who: 'А', ru: 'Привет! Давай повторим новые слова.', zh: '你好！我们来复习新单词吧。' });
+  for (i = 0; i < chunk.length; i++) {
+    var w = chunk[i], fr, zhFr;
+    if (w.zh) { fr = DLG_META[(seed + i) % DLG_META.length]; }
+    else { var pool = DLG_FRAMES[posGuess(w.ru)] || DLG_FRAMES.n; fr = pool[(seed + i) % pool.length]; }
+    var q = fr[0].replace(/W/g, w.ru);
+    var a = fr[1].replace(/W/g, w.ru).replace(/Z/g, w.zh || '');
+    var qz = fr[2].replace(/W/g, w.ru);
+    var az = fr[3].replace(/W/g, w.ru).replace(/Z/g, w.zh || '');
+    if (i % 2 === 0) {
+      lines.push({ who: 'А', ru: q, zh: qz });
+      lines.push({ who: 'Б', ru: a, zh: az });
+    } else {
+      lines.push({ who: 'Б', ru: q, zh: qz });
+      lines.push({ who: 'А', ru: a, zh: az });
+    }
+  }
+  lines.push({ who: 'Б', ru: 'Хорошо, теперь я запомню.', zh: '好，这下我记住了。' });
+  return lines;
+}
+function generateDialogue() {
+  var words = state.words;
+  if (!words.length) { show('home'); return; }
+  var chunks = [], size = 3, i, made = 0, firstId = null;
+  for (i = 0; i < words.length; i += size) chunks.push(words.slice(i, i + size));
+  for (i = 0; i < chunks.length; i++) {
+    var sents = makeDialogueLines(chunks[i], i);
+    var names = [];
+    for (var k = 0; k < chunks[i].length; k++) names.push(chunks[i][k].ru);
+    var id = 'd' + Date.now().toString(36) + i;
+    var item = {
+      id: id, custom: true, kind: 'dialog', label: '对话', level: '我的',
+      title: '我的对话 ' + (i + 1) + '（' + names.join('、') + '）',
+      sentences: sents, vocab: [],
+      sec: Math.round(totalChars({ sentences: sents }) / 13)
+    };
+    state.custom.push(item);
+    made++;
+    if (!firstId) firstId = id;
+  }
+  saveCustom();
+  renderHome();
+  show('home');
+  if (firstId) openText(firstId);
+}
+
 /* ---------------- home ---------------- */
 /* 分级短文的等级分组说明 */
 var LEVEL_META = {
@@ -475,6 +892,7 @@ function renderHome() {
     for (i = 0; i < ch.scenes.length; i++) list.appendChild(makeSceneCard(ch.scenes[i]));
   }
   renderCustom();
+  renderWords();
 }
 /* 分级短文：按 A1 / A1+ / A2 / A2+ / B1 / B2 分块排列 */
 function renderLevelGroups(list, ch) {
@@ -536,8 +954,8 @@ function renderCustom() {
       var row = document.createElement('div');
       row.className = 'row';
       var b = document.createElement('button');
-      b.className = 'entry';
-      b.textContent = '短文 · ' + it.sentences.length + ' 句 · 手机朗读';
+      b.className = 'entry' + (it.kind === 'dialog' ? ' dlg' : '');
+      b.textContent = (it.kind === 'dialog' ? '对话 · ' + it.sentences.length + ' 句 · 双人朗读' : '短文 · ' + it.sentences.length + ' 句 · 手机朗读');
       b.onclick = function () { openText(it.id); };
       var del = document.createElement('button');
       del.className = 'del';
@@ -674,7 +1092,7 @@ function ttsVoice() {
   }
   return null;
 }
-function speak(text, rate, done, fail) {
+function speak(text, rate, done, fail, pitch) {
   if (!ttsAvailable()) { if (fail) fail(); return; }
   /* 只在真的还在读时才打断：这样连读/一次读完是自然的「接着读」，iOS 上不会丢句 */
   try {
@@ -685,6 +1103,7 @@ function speak(text, rate, done, fail) {
   var v = ttsVoice();
   if (v) u.voice = v;
   u.rate = Math.min(2, Math.max(0.5, rate || 1));
+  if (pitch) u.pitch = pitch;
   u.onend = function () { u.onend = null; if (done) done(); };
   u.onerror = function () { u.onerror = null; if (fail) fail(); else if (done) done(); };
   try { window.speechSynthesis.speak(u); } catch (e) { if (fail) fail(); }
@@ -704,7 +1123,9 @@ function stopSpeaking() {
 /* 播一句：有录音就放录音，没有（我的短文）就用系统语音 */
 function playOne(t, idx, rate, done, fail) {
   if (hasAudio(t)) { playSrc(t, idx, rate, done, fail); return; }
-  speak(t.sentences[idx].ru, rate, done, fail);
+  var s = t.sentences[idx];
+  /* 对话用音高区分两个说话人（手机只有一套俄语音色时也能听出谁在说） */
+  speak(s.ru, rate, done, fail, (s && s.who === 'Б') ? 0.8 : 1);
 }
 /* 整篇播放状态：mode = '' | 'seq'（每句停 2 秒）| 'loop'（反复听）| 'once'（一口气读完） */
 var seq = { on: false, mode: '', timer: null, token: 0 };
@@ -768,7 +1189,7 @@ function renderPractice() {
   var s = t.sentences[i];
   if (t.custom) {
     $('pTitle').textContent = t.title || '我的短文';
-    $('pSub').textContent = '我的短文 · 第 ' + (i + 1) + ' / ' + t.sentences.length + ' 句';
+    $('pSub').textContent = (t.label || '我的短文') + ' · 第 ' + (i + 1) + ' / ' + t.sentences.length + ' 句';
   } else {
     $('pTitle').textContent = sc.titleZh;
     $('pSub').textContent = t.label + ' · ' + sc.title + ' · 第 ' + (i + 1) + ' / ' + t.sentences.length + ' 句';
@@ -805,7 +1226,7 @@ function renderPractice() {
   $('foldZh').style.display = anyZh ? '' : 'none';
   $('foldVocab').style.display = (t.vocab && t.vocab.length) ? '' : 'none';
   var ch = chapterOf(t.id);
-  var lead = ch ? ch.name + ' · ' : '我的短文 · 手机朗读 · ';
+  var lead = ch ? ch.name + ' · ' : (t.label || '我的短文') + ' · 手机朗读 · ';
   $('pFoot').textContent = lead + (t.level || '') + ' · 共 ' + t.sentences.length + ' 句' +
     (t.vocab && t.vocab.length ? ' · ' + t.vocab.length + ' 个生词' : '');
   try { ta.focus({ preventScroll: false }); } catch (e) { ta.focus(); }
@@ -1127,6 +1548,16 @@ $('btnSeq').onclick = function () { startSeq('seq'); };
 $('btnOnce').onclick = function () { startSeq('once'); };
 $('btnLoop').onclick = function () { startSeq('loop'); };
 $('btnAdd').onclick = function () { openAdd(); };
+$('btnAddWords').onclick = function () { openWords(); };
+$('btnWordsBack').onclick = function () { show('home'); };
+$('btnWordsClear').onclick = function () { $('wordsInput').value = ''; $('wordsFoot').textContent = ''; $('wordsInput').focus(); };
+$('btnWordsSave').onclick = function () { saveWordsFromInput(); };
+$('btnWordDict').onclick = function () { startWordDict(); };
+$('btnWordDlg').onclick = function () { generateDialogue(); };
+$('btnWDPlay').onclick = function () { playWord(); };
+$('btnWDNext').onclick = function () { wdPress(); };
+$('btnWDReveal').onclick = function () { wdReveal(); };
+$('btnWDBack').onclick = function () { stopSpeaking(); show('home'); };
 $('btnAddBack').onclick = function () { show('home'); };
 $('btnAddCancel').onclick = function () { show('home'); };
 $('btnAddSave').onclick = function () { saveAdd(); };
