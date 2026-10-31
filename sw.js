@@ -1,5 +1,5 @@
 /* 离线缓存：外壳预缓存，音频用到再存 */
-const CACHE = 'diktant-1c417ff88336';
+const CACHE = 'diktant-0b36a84e665f';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
