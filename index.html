@@ -172,6 +172,20 @@ body{
 .sentline .ru{font-size:16.5px;font-weight:600}
 .sentline .zh{color:var(--ink-2);font-size:14px;margin-top:2px}
 .foot{text-align:center;color:var(--ink-3);font-size:12px;padding:22px 0 10px}
+
+/* ---------- 分级短文的等级分组 ---------- */
+.lvjump{display:flex;gap:6px;overflow-x:auto;padding:2px 0 12px;-webkit-overflow-scrolling:touch}
+.lvjump::-webkit-scrollbar{display:none}
+.lvjump button{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:999px;
+  padding:6px 11px;font-size:12.5px;font-weight:700;color:var(--blue-d);cursor:pointer;font-family:inherit}
+.lvjump button:active{background:var(--blue-l)}
+.lvsec{display:flex;align-items:center;gap:10px;margin:20px 0 10px}
+.lvsec:first-of-type{margin-top:2px}
+.lvsec .badge{flex:0 0 auto;background:var(--blue);color:#fff;font-weight:800;font-size:12.5px;
+  padding:5px 10px;border-radius:9px;letter-spacing:.4px}
+.lvsec .lvtx b{display:block;font-size:14.5px;color:var(--ink);line-height:1.25}
+.lvsec .lvtx span{display:block;font-size:12.5px;color:var(--ink-3);margin-top:1px}
+.lvsec .line{flex:1;height:1px;background:var(--line)}
 </style>
 </head>
 <body>
@@ -373,6 +387,40 @@ function totalChars(t) {
 function estSeconds(t) { return t.sec ? Math.round(t.sec) : Math.round(totalChars(t) / 13); }
 
 /* ---------------- home ---------------- */
+/* 分级短文的等级分组说明 */
+var LEVEL_META = {
+  'A1':  { name: 'A1 · 入门', desc: '短句为主，日常生活词汇' },
+  'A1+': { name: 'A1 → A2 过渡', desc: '开始出现过去时与原因从句' },
+  'A2':  { name: 'A2 · 基础', desc: '能把一件完整的事说清楚' },
+  'A2+': { name: 'A2 → B1 过渡', desc: '复合句、转述和口语幽默' },
+  'B1':  { name: 'B1 · 中级', desc: '观点、经历与叙事' },
+  'B2':  { name: 'B2 · 中高级', desc: '抽象话题与长句' }
+};
+var LEVEL_ORDER_UI = ['A1', 'A1+', 'A2', 'A2+', 'B1', 'B2'];
+function lvDomId(lv) { return 'lv-' + String(lv).replace(/\+/g, 'p'); }
+function makeSceneCard(sc) {
+  var c = document.createElement('div');
+  c.className = 'card';
+  c.innerHTML =
+    '<h3>' + esc(sc.titleZh) + ' <span class="lvl">' + esc(sc.level) + '</span></h3>' +
+    '<div class="rt">' + esc(sc.title) + '</div>';
+  var box = document.createElement('div');
+  box.className = 'entries';
+  for (var k = 0; k < sc.texts.length; k++) {
+    (function (it) {
+      var b = document.createElement('button');
+      b.className = 'entry' + (it.kind === 'dialog' ? ' dlg' : '');
+      var st = '';
+      if (state.done[it.id]) st = ' · 已练完';
+      else if (state.lastPos && state.lastPos[it.id]) st = ' · 练到第 ' + (state.lastPos[it.id] + 1) + ' 句';
+      b.textContent = (it.kind === 'dialog' ? '对话' : '短文') + ' · ' + it.sentences.length + ' 句 · 约 ' + estSeconds(it) + ' 秒' + st;
+      b.onclick = function () { openText(it.id); };
+      box.appendChild(b);
+    })(sc.texts[k]);
+  }
+  c.appendChild(box);
+  return c;
+}
 function renderHome() {
   var tabs = $('tabs'), i;
   tabs.innerHTML = '';
@@ -392,32 +440,53 @@ function renderHome() {
     (cnt.texts ? cnt.texts + ' 篇 · ' : '') + cnt.sentences + ' 句 · 音频离线可用';
   var list = $('textlist');
   list.innerHTML = '';
-  for (i = 0; i < ch.scenes.length; i++) {
-    (function (sc) {
-      var c = document.createElement('div');
-      c.className = 'card';
-      c.innerHTML =
-        '<h3>' + esc(sc.titleZh) + ' <span class="lvl">' + esc(sc.level) + '</span></h3>' +
-        '<div class="rt">' + esc(sc.title) + '</div>';
-      var box = document.createElement('div');
-      box.className = 'entries';
-      for (var k = 0; k < sc.texts.length; k++) {
-        (function (it) {
-          var b = document.createElement('button');
-          b.className = 'entry' + (it.kind === 'dialog' ? ' dlg' : '');
-          var st = '';
-          if (state.done[it.id]) st = ' · 已练完';
-          else if (state.lastPos && state.lastPos[it.id]) st = ' · 练到第 ' + (state.lastPos[it.id] + 1) + ' 句';
-          b.textContent = (it.kind === 'dialog' ? '对话' : '短文') + ' · ' + it.sentences.length + ' 句 · 约 ' + estSeconds(it) + ' 秒' + st;
-          b.onclick = function () { openText(it.id); };
-          box.appendChild(b);
-        })(sc.texts[k]);
-      }
-      c.appendChild(box);
-      list.appendChild(c);
-    })(ch.scenes[i]);
+  if (ch.id === 'c7') {
+    renderLevelGroups(list, ch);
+  } else {
+    for (i = 0; i < ch.scenes.length; i++) list.appendChild(makeSceneCard(ch.scenes[i]));
   }
   renderCustom();
+}
+/* 分级短文：按 A1 / A1+ / A2 / A2+ / B1 / B2 分块排列 */
+function renderLevelGroups(list, ch) {
+  var i, lv, groups = {}, order = LEVEL_ORDER_UI.slice(), extra = [];
+  for (i = 0; i < order.length; i++) groups[order[i]] = [];
+  for (i = 0; i < ch.scenes.length; i++) {
+    lv = ch.scenes[i].level || '';
+    if (!groups[lv]) { groups[lv] = []; extra.push(lv); }
+    groups[lv].push(ch.scenes[i]);
+  }
+  order = order.concat(extra);
+  var jump = document.createElement('div');
+  jump.className = 'lvjump';
+  for (i = 0; i < order.length; i++) {
+    (function (key) {
+      if (!groups[key].length) return;
+      var b = document.createElement('button');
+      b.textContent = key + ' · ' + groups[key].length;
+      b.onclick = function () {
+        var sec = document.getElementById(lvDomId(key));
+        if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      };
+      jump.appendChild(b);
+    })(order[i]);
+  }
+  list.appendChild(jump);
+  for (i = 0; i < order.length; i++) {
+    (function (key) {
+      var arr = groups[key];
+      if (!arr || !arr.length) return;
+      var meta = LEVEL_META[key] || { name: key, desc: '' };
+      var head = document.createElement('div');
+      head.className = 'lvsec';
+      head.id = lvDomId(key);
+      head.innerHTML = '<span class="badge">' + esc(key) + '</span>' +
+        '<div class="lvtx"><b>' + esc(meta.name) + '</b><span>' + arr.length + ' 篇' +
+        (meta.desc ? ' · ' + esc(meta.desc) : '') + '</span></div><i class="line"></i>';
+      list.appendChild(head);
+      for (var k = 0; k < arr.length; k++) list.appendChild(makeSceneCard(arr[k]));
+    })(order[i]);
+  }
 }
 /* 我的短文：用户自己粘贴的文章，朗读走系统语音 */
 function renderCustom() {
