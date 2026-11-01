@@ -265,6 +265,26 @@ body.paper .typebox{display:none}
 .daily .acts .entry{flex:1 1 0}
 .daily .acts .more{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:12px;
   padding:9px 12px;font-size:13px;font-weight:700;color:var(--ink-2);font-family:inherit;cursor:pointer}
+/* ---------- 大屏（平板 / 电脑）两栏 ---------- */
+.colA,.colB{min-width:0}
+@media (min-width:900px){
+  .wrap{max-width:1080px}
+  #home .wrap{max-width:940px}
+  #practice .wrap{display:grid;grid-template-columns:minmax(300px,370px) 1fr;gap:26px;align-items:start}
+  #practice .colA{position:sticky;top:76px}
+  #practice .dots{justify-content:flex-start;margin-top:0}
+  .playbig{width:126px;height:126px;font-size:40px}
+  .paperans .ru{font-size:25px;line-height:1.65}
+  .paperans .zh{font-size:15.5px}
+  .bottom .in{max-width:1080px}
+  .bottom .btn{font-size:16px;padding:13px 18px}
+  .foot{font-size:13px}
+}
+@media (min-width:1240px){
+  .wrap{max-width:1180px}
+  #practice .wrap{grid-template-columns:minmax(330px,410px) 1fr;gap:34px}
+  .paperans .ru{font-size:27px}
+}
 </style>
 </head>
 <body>
@@ -314,6 +334,7 @@ body.paper .typebox{display:none}
     <div class="pbar"><i id="pProg"></i></div>
   </div>
   <div class="wrap">
+    <div class="colA">
     <div class="player">
       <button class="playbig" id="btnPlay" aria-label="播放">▶</button>
       <div class="under">
@@ -330,6 +351,8 @@ body.paper .typebox{display:none}
       <div class="hint readhint" id="readHint">播放键 = 读 <b class="link" id="twiceToggle">2 遍</b>（第二遍慢一点）· 连读 = 每句读完停 2 秒 · 一次读完 = 不停顿读完整篇 · 循环 = 反复听这一篇</div>
     </div>
     <div class="dots" id="dots"></div>
+    </div>
+    <div class="colB">
     <div class="typebox">
       <textarea id="input" placeholder="听完把句子写在这里…" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off"></textarea>
       <div class="hint">想不起来就点「看原文」，不丢人。</div>
@@ -346,6 +369,7 @@ body.paper .typebox{display:none}
 <details class="fold" id="foldZh"><summary>全文译文</summary><div class="body" id="zhBody"></div></details>
     <details class="fold" id="foldVocab"><summary>生词表</summary><div class="body" id="vocabBody"></div></details>
     <div class="foot" id="pFoot"></div>
+    </div>
   </div>
   <div class="bottom"><div class="in">
     <button class="btn ghost" id="btnReveal">看原文</button>
