@@ -43,11 +43,6 @@ body{
 }
 .tab.on{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 4px 12px -4px rgba(37,99,235,.5)}
 .leveldesc{color:var(--ink-3);font-size:13px;margin:8px 2px 14px}
-/* 生活场景的二级分类按钮：全部 / 小类… */
-.gchips{display:flex;gap:7px;flex-wrap:wrap;margin:-6px 0 14px}
-.gchip{border:1px solid var(--line);background:#fff;color:var(--ink-2);border-radius:999px;
-  padding:6px 12px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
-.gchip.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .card{
   background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
   padding:16px;margin-bottom:12px;cursor:pointer;border:1px solid rgba(16,24,40,.04);
@@ -322,7 +317,6 @@ body.paper .typebox{display:none}
     </div>
     <div class="tabs" id="tabs"></div>
     <div class="leveldesc" id="leveldesc"></div>
-    <div class="gchips" id="gchips" style="display:none"></div>
     <div id="textlist"></div>
     <div class="foot" id="homeFoot"></div>
   </div>
@@ -484,7 +478,7 @@ var CONTENT = {"version":6,"kind":"scene-texts","chapters":[{"id":"c1","name":"�
 var STORE = 'diktant.v2';
 var CUSTOM_KEY = 'diktant.custom.v1';
 var SPEEDS = [0.6, 0.75, 0.9, 1, 1.25, 1.5];
-var state = { ch: 'c7', grp: {}, textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {}, custom: [], words: [], mode: 'paper', marks: {} };
+var state = { ch: 'c7', textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {}, custom: [], words: [], mode: 'paper', marks: {} };
 
 function loadCustom() {
   try {
@@ -522,15 +516,14 @@ function load() {
       if (s.pos && typeof s.pos === 'object') state.lastPos = s.pos;
       if (s.mode === 'paper' || s.mode === 'type') state.mode = s.mode;
       if (s.marks && typeof s.marks === 'object') state.marks = s.marks;
-      if (s.grp && typeof s.grp === 'object') state.grp = s.grp;
-    }
+        }
   } catch (e) {}
 }
 function save() {
   try {
     localStorage.setItem(STORE, JSON.stringify({
       ch: state.ch, speed: state.speed, twice: state.twice, typed: state.typed, seen: state.seen, done: state.done,
-      pos: state.lastPos || {}, ui2: 1, mode: state.mode, marks: state.marks || {}, grp: state.grp || {}
+      pos: state.lastPos || {}, ui2: 1, mode: state.mode, marks: state.marks || {}
     }));
   } catch (e) {}
 }
@@ -1010,8 +1003,8 @@ var LEVEL_META = {
 };
 var LEVEL_ORDER_UI = ['A1', 'A1+', 'A2', 'A2+', 'B1', 'B2'];
 function lvDomId(lv) { return 'lv-' + String(lv).replace(/\+/g, 'p'); }
-/* 生活场景章节的二级细分：点一下只看这一小类 */
-var SCENE_GROUPS = {
+/* 生活场景章节内的小类分块（顺序就是展示顺序）*/
+var SCENE_SECTIONS = {
   'c1': [
     { name: '见面与寒暄', ids: ['c1-1', 'c1-2', 'c1-3'] },
     { name: '感谢、请求与帮忙', ids: ['c1-4', 'c1-5'] },
@@ -1087,53 +1080,55 @@ function renderHome() {
   var list = $('textlist');
   list.innerHTML = '';
   if (ch.id === 'c7') {
-    renderGroupChips(null);
     renderLevelGroups(list, ch);
   } else {
-    var groups = SCENE_GROUPS[ch.id] || null;
-    var sel = (state.grp && state.grp[ch.id]) || 'all';
-    renderGroupChips(groups, sel);
-    var only = null;
-    if (groups && sel !== 'all') {
-      for (i = 0; i < groups.length; i++) if (groups[i].name === sel) only = groups[i].ids;
-    }
-    for (i = 0; i < ch.scenes.length; i++) {
-      var sc = ch.scenes[i];
-      if (only && only.indexOf(sc.id) < 0) continue;
-      list.appendChild(makeSceneCard(sc));
-    }
+    renderSceneSections(list, ch);
   }
   renderCustom();
   renderWords();
   renderDaily();
 }
-/* 生活场景的二级分类按钮：全部 / 小类… */
-function renderGroupChips(groups, sel) {
-  var box = $('gchips');
-  if (!box) return;
-  box.innerHTML = '';
-  if (!groups || !groups.length) { box.style.display = 'none'; return; }
-  box.style.display = '';
-  var i;
-  var all = document.createElement('button');
-  all.className = 'gchip' + (sel === 'all' ? ' on' : '');
-  all.textContent = '全部 ' + totalIn(groups);
-  all.onclick = function () { state.grp[curChapter().id] = 'all'; save(); renderHome(); };
-  box.appendChild(all);
-  for (i = 0; i < groups.length; i++) {
-    (function (g) {
-      var b = document.createElement('button');
-      b.className = 'gchip' + (sel === g.name ? ' on' : '');
-      b.textContent = g.name + ' ' + g.ids.length;
-      b.onclick = function () { state.grp[curChapter().id] = g.name; save(); renderHome(); };
-      box.appendChild(b);
-    })(groups[i]);
+/* 生活场景：章节内按小类分块（小标题 + 卡片），顶部有跳转条 */
+function renderSceneSections(list, ch) {
+  var groups = SCENE_SECTIONS[ch.id] || null;
+  if (!groups) {
+    for (var j = 0; j < ch.scenes.length; j++) list.appendChild(makeSceneCard(ch.scenes[j]));
+    return;
   }
-}
-function totalIn(groups) {
-  var n = 0, i;
-  for (i = 0; i < groups.length; i++) n += groups[i].ids.length;
-  return n;
+  var byId = {}, i, k;
+  for (i = 0; i < ch.scenes.length; i++) byId[ch.scenes[i].id] = ch.scenes[i];
+  var jump = document.createElement('div');
+  jump.className = 'lvjump';
+  for (i = 0; i < groups.length; i++) {
+    (function (g, n) {
+      var b = document.createElement('button');
+      b.textContent = g.name + ' · ' + g.ids.length;
+      b.onclick = function () {
+        var sec = document.getElementById('grp-' + n);
+        if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      };
+      jump.appendChild(b);
+    })(groups[i], i + 1);
+  }
+  list.appendChild(jump);
+  for (i = 0; i < groups.length; i++) {
+    var g = groups[i];
+    var head = document.createElement('div');
+    head.className = 'lvsec';
+    head.id = 'grp-' + (i + 1);
+    head.innerHTML = '<span class="badge">' + (i + 1) + '</span>' +
+      '<div class="lvtx"><b>' + esc(g.name) + '</b><span>' + g.ids.length + ' 个场景</span></div><i class="line"></i>';
+    list.appendChild(head);
+    for (k = 0; k < g.ids.length; k++) {
+      if (byId[g.ids[k]]) list.appendChild(makeSceneCard(byId[g.ids[k]]));
+    }
+  }
+  /* 没有归入任何小类的场景（保险起见）放最后 */
+  var used = {};
+  for (i = 0; i < groups.length; i++) for (k = 0; k < groups[i].ids.length; k++) used[groups[i].ids[k]] = 1;
+  for (i = 0; i < ch.scenes.length; i++) {
+    if (!used[ch.scenes[i].id]) list.appendChild(makeSceneCard(ch.scenes[i]));
+  }
 }
 /* 分级短文：按 A1 / A1+ / A2 / A2+ / B1 / B2 分块排列 */
 function renderLevelGroups(list, ch) {
