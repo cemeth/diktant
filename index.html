@@ -129,6 +129,30 @@ body{
 .typebox textarea::placeholder{color:var(--ink-3)}
 .hint{color:var(--ink-3);font-size:12.5px;padding:0 4px 2px}
 
+/* ---------- 纸笔模式 ---------- */
+.paperbox{display:none}
+body.paper .paperbox{display:block}
+body.paper .typebox{display:none}
+.markrow{display:flex;gap:10px;margin:14px 0 8px}
+.markbtn{flex:1 1 0;padding:15px 10px;border:1px solid var(--line);background:var(--card);border-radius:14px;font-size:15.5px;font-weight:700;cursor:pointer;color:var(--ink-2);box-shadow:var(--shadow);font-family:inherit}
+.markbtn.ok{color:#15803d;border-color:#bbf7d0;background:#f0fdf4}
+.markbtn.miss{color:#b91c1c;border-color:#fecaca;background:#fef2f2}
+.markbtn.on{box-shadow:0 0 0 2px currentColor inset,var(--shadow)}
+.markhint{text-align:center;margin-top:2px}
+.dot.ok{background:#22c55e}
+.dot.miss{background:#ef4444}
+.paperans{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:12px;border-left:4px solid var(--green)}
+.paperans .ru{font-size:22px;line-height:1.6;font-weight:600;color:var(--green);white-space:pre-wrap;word-break:break-word}
+.paperans .zh{color:var(--ink-2);font-size:14.5px;margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+.paperans .mtag{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;margin-bottom:10px}
+.paperans .mtag.ok{background:#dcfce7;color:#15803d}
+.paperans .mtag.miss{background:#fee2e2;color:#b91c1c}
+.doneList .mline{display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap}
+.doneList .mline .mtag{font-size:12px;font-weight:700;border-radius:999px;padding:2px 8px}
+.doneList .mline .mtag.ok{background:#dcfce7;color:#15803d}
+.doneList .mline .mtag.miss{background:#fee2e2;color:#b91c1c}
+.doneList .mline .mini{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font-size:12.5px;cursor:pointer;color:var(--ink-2);font-family:inherit}
+
 .reveal{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:12px;border-left:4px solid var(--green)}
 .reveal .lbl{font-size:12px;color:var(--ink-3);margin-bottom:3px}
 .reveal .mine{color:var(--ink-2);font-size:15px;margin-bottom:12px;white-space:pre-wrap;word-break:break-word}
@@ -284,6 +308,7 @@ body{
     <div class="in">
       <button class="iconbtn" id="btnBack" aria-label="返回">‹</button>
       <div class="ttl"><b id="pTitle">—</b><span id="pSub">—</span></div>
+      <button class="iconbtn" id="btnMode" aria-label="切换纸笔/打字">✎</button>
       <button class="iconbtn" id="btnDots" aria-label="句子列表">⋯</button>
     </div>
     <div class="pbar"><i id="pProg"></i></div>
@@ -308,6 +333,13 @@ body{
     <div class="typebox">
       <textarea id="input" placeholder="听完把句子写在这里…" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off"></textarea>
       <div class="hint">想不起来就点「看原文」，不丢人。</div>
+    </div>
+    <div class="paperbox" id="paperBox">
+      <div class="markrow">
+        <button class="markbtn ok" id="btnMarkOk">✓ 听清了</button>
+        <button class="markbtn miss" id="btnMarkMiss">✗ 没听出来</button>
+      </div>
+      <div class="hint markhint">听 → 在纸上写 → 回车看答案 → 1 听清了 / 2 没听出来（也可点上面按钮）</div>
     </div>
     <div id="revealBox"></div>
     <details class="fold" id="foldRu"><summary>俄语全文</summary><div class="body" id="ruBody"></div></details>
@@ -422,7 +454,7 @@ var CONTENT = {"version":6,"kind":"scene-texts","chapters":[{"id":"c1","name":"�
 var STORE = 'diktant.v2';
 var CUSTOM_KEY = 'diktant.custom.v1';
 var SPEEDS = [0.6, 0.75, 0.9, 1, 1.25, 1.5];
-var state = { ch: 'c7', textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {}, custom: [], words: [] };
+var state = { ch: 'c7', textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {}, custom: [], words: [], mode: 'paper', marks: {} };
 
 function loadCustom() {
   try {
@@ -458,6 +490,8 @@ function load() {
       if (typeof s.speed === 'number' && s.speed >= 0.5 && s.speed <= 2) state.speed = s.speed;
       if (typeof s.twice === 'boolean') state.twice = s.twice;
       if (s.pos && typeof s.pos === 'object') state.lastPos = s.pos;
+      if (s.mode === 'paper' || s.mode === 'type') state.mode = s.mode;
+      if (s.marks && typeof s.marks === 'object') state.marks = s.marks;
     }
   } catch (e) {}
 }
@@ -465,7 +499,7 @@ function save() {
   try {
     localStorage.setItem(STORE, JSON.stringify({
       ch: state.ch, speed: state.speed, twice: state.twice, typed: state.typed, seen: state.seen, done: state.done,
-      pos: state.lastPos || {}, ui2: 1
+      pos: state.lastPos || {}, ui2: 1, mode: state.mode, marks: state.marks || {}
     }));
   } catch (e) {}
 }
@@ -1303,7 +1337,8 @@ function renderPractice() {
   for (var k = 0; k < t.sentences.length; k++) {
     (function (n) {
       var d = document.createElement('button');
-      d.className = 'dot' + (n === i ? ' cur' : '') + (state.seen[t.id + ':' + n] ? ' seen' : '');
+      var mk = state.marks[t.id + ':' + n];
+      d.className = 'dot' + (n === i ? ' cur' : '') + (state.seen[t.id + ':' + n] ? ' seen' : '') + (mk === 1 ? ' ok' : (mk === 2 ? ' miss' : ''));
       d.setAttribute('aria-label', '第' + (n + 1) + '句');
       d.onclick = function () { goto_($('input').value, n); };
       dots.appendChild(d);
@@ -1316,8 +1351,10 @@ function renderPractice() {
   var ta = $('input');
   var saved = state.typed[t.id + ':' + i];
   ta.value = (typeof saved === 'string') ? saved : '';
-  $('btnReveal').textContent = '看原文';
+  applyMode();
+  $('btnReveal').textContent = state.mode === 'paper' ? '显示答案' : '看原文';
   $('btnNext').textContent = (i === t.sentences.length - 1) ? '完成' : '下一句';
+  renderMarks();
   renderSpeeds();
   renderTwice();
   updateSeqBtn();
@@ -1332,7 +1369,46 @@ function renderPractice() {
   var lead = ch ? ch.name + ' · ' : (t.label || '我的短文') + ' · 手机朗读 · ';
   $('pFoot').textContent = lead + (t.level || '') + ' · 共 ' + t.sentences.length + ' 句' +
     (t.vocab && t.vocab.length ? ' · ' + t.vocab.length + ' 个生词' : '');
-  try { ta.focus({ preventScroll: false }); } catch (e) { ta.focus(); }
+  if (state.mode !== 'paper') {
+    try { ta.focus({ preventScroll: false }); } catch (e) { ta.focus(); }
+  }
+}
+function applyMode() {
+  var paper = state.mode === 'paper';
+  var b = document.body;
+  if (b && b.classList) {
+    if (paper) b.classList.add('paper'); else b.classList.remove('paper');
+  }
+  var btn = $('btnMode');
+  if (btn) btn.textContent = paper ? '✎' : '⌨';
+  var p2 = $('paperBox');
+  if (p2) p2.style.display = paper ? '' : 'none';
+}
+function markOf(t, i) { return state.marks[t.id + ':' + i] || 0; }
+function renderMarks() {
+  var t = curText();
+  if (!t) return;
+  var m = markOf(t, state.idx);
+  var ok = $('btnMarkOk'), miss = $('btnMarkMiss');
+  if (ok && ok.classList) { if (m === 1) ok.classList.add('on'); else ok.classList.remove('on'); }
+  if (miss && miss.classList) { if (m === 2) miss.classList.add('on'); else miss.classList.remove('on'); }
+}
+function markCurrent(v) {
+  var t = curText();
+  if (!t) return;
+  state.marks[t.id + ':' + state.idx] = v;
+  state.seen[t.id + ':' + state.idx] = 1;
+  if (!state.lastPos) state.lastPos = {};
+  state.lastPos[t.id] = state.idx;
+  save();
+  renderMarks();
+  var dot = $('dots').children[state.idx];
+  if (dot && dot.classList) {
+    dot.classList.remove('ok'); dot.classList.remove('miss');
+    dot.classList.add(v === 1 ? 'ok' : 'miss');
+    dot.classList.add('seen');
+  }
+  nextSentence();
 }
 function revealHTML(t, i) {
   var s = t.sentences[i];
@@ -1536,19 +1612,30 @@ function toggleReveal() {
   var i = state.idx;
   var key = t.id + ':' + i;
   var box = $('revealBox');
+  var paper = state.mode === 'paper';
   if (state.open[key]) {
     delete state.open[key];
     box.innerHTML = '';
-    $('btnReveal').textContent = '看原文';
+    $('btnReveal').textContent = paper ? '显示答案' : '看原文';
     return;
   }
   state.open[key] = 1;
   state.seen[key] = 1;
   save();
-  box.innerHTML = revealHTML(t, i);
-  $('btnReveal').textContent = '收起原文';
+  box.innerHTML = paper ? paperRevealHTML(t, i) : revealHTML(t, i);
+  $('btnReveal').textContent = '收起';
   var dot = $('dots').children[i];
   if (dot) dot.classList.add('seen');
+}
+function paperRevealHTML(t, i) {
+  var s = t.sentences[i];
+  var spk = s.who ? '<span class="who">' + esc(s.who) + '</span> ' : '';
+  var m = markOf(t, i);
+  var tag = m === 1 ? '<span class="mtag ok">✓ 听清了</span>' : (m === 2 ? '<span class="mtag miss">✗ 没听出来</span>' : '<span class="mtag">对照纸上写的</span>');
+  return '<div class="paperans">' + tag +
+    '<div class="ru">' + spk + esc(s.ru) + '</div>' +
+    (s.zh ? '<div class="zh">' + esc(s.zh) + '</div>' : '') +
+    '</div>';
 }
 function nextSentence() {
   var t = curText();
@@ -1565,32 +1652,79 @@ function prevSentence() {
   renderPractice();
   startPlayback();
 }
+function jumpTo(k) {
+  var t = curText();
+  state.idx = k;
+  state.open[t.id + ':' + k] = 0;
+  show('practice');
+  renderPractice();
+  startPlayback();
+}
 function finish() {
   stopSeq();
   var t = curText();
   state.done[t.id] = 1;
   if (state.lastPos) state.lastPos[t.id] = 0;
   save();
-  var h = '', typedN = 0;
-  for (var i = 0; i < t.sentences.length; i++) {
-    var mine = state.typed[t.id + ':' + i] || '';
-    var hasMine = !!(mine && mine.trim());
-    var d = hasMine ? diffWords(t.sentences[i].ru, mine) : null;
-    if (hasMine) typedN++;
-    h += '<div class="sentline"><div class="n">第 ' + (i + 1) + ' 句' + (state.seen[t.id + ':' + i] ? '' : ' · 没看原文') + '</div>' +
-      '<div class="ru">' + (t.sentences[i].who ? '<span class="who">' + esc(t.sentences[i].who) + '</span> ' : '') +
-      (d ? d.orig : esc(t.sentences[i].ru)) + '</div>' +
-      (d ? '<div class="cmp' + (d.miss === 0 && d.extra === 0 ? ' ok' : '') + '"><b>你写</b>' + d.typed + ' ' + diffTip(d) + '</div>' : '') +
-      '<div class="zh">' + esc(t.sentences[i].zh) + '</div></div>';
+  var list = $('doneList');
+  list.innerHTML = '';
+  var typedN = 0, okN = 0, missN = 0;
+  var n = t.sentences.length;
+  for (var i = 0; i < n; i++) {
+    (function (k) {
+      var s = t.sentences[k];
+      var mine = state.typed[t.id + ':' + k] || '';
+      var hasMine = !!(mine && mine.trim());
+      var d = hasMine ? diffWords(s.ru, mine) : null;
+      if (hasMine) typedN++;
+      var m = markOf(t, k);
+      if (m === 1) okN++; else if (m === 2) missN++;
+      var row = document.createElement('div');
+      row.className = 'sentline';
+      var head = document.createElement('div');
+      head.className = 'n';
+      head.textContent = '第 ' + (k + 1) + ' 句' + (state.seen[t.id + ':' + k] ? '' : ' · 没看原文');
+      row.appendChild(head);
+      var ru = document.createElement('div');
+      ru.className = 'ru';
+      ru.innerHTML = (s.who ? '<span class="who">' + esc(s.who) + '</span> ' : '') + (d ? d.orig : esc(s.ru));
+      row.appendChild(ru);
+      if (d) {
+        var cmp = document.createElement('div');
+        cmp.className = 'cmp' + (d.miss === 0 && d.extra === 0 ? ' ok' : '');
+        cmp.innerHTML = '<b>你写</b>' + d.typed + ' ' + diffTip(d);
+        row.appendChild(cmp);
+      }
+      var ml = document.createElement('div');
+      ml.className = 'mline';
+      if (m) {
+        var tag = document.createElement('span');
+        tag.className = 'mtag ' + (m === 1 ? 'ok' : 'miss');
+        tag.textContent = m === 1 ? '✓ 听清了' : '✗ 没听出来';
+        ml.appendChild(tag);
+      }
+      var btn = document.createElement('button');
+      btn.className = 'mini';
+      btn.textContent = '▶ 重听这句';
+      btn.onclick = function () { jumpTo(k); };
+      ml.appendChild(btn);
+      row.appendChild(ml);
+      var zh = document.createElement('div');
+      zh.className = 'zh';
+      zh.textContent = s.zh || '';
+      row.appendChild(zh);
+      list.appendChild(row);
+    })(i);
   }
-  $('doneList').innerHTML = h;
   var dsc = curScene();
-  var typedInfo = ' · 写了 ' + typedN + ' / ' + t.sentences.length + ' 句';
+  var info = '';
+  if (typedN) info += ' · 写了 ' + typedN + ' / ' + n + ' 句';
+  if (okN || missN) info += ' · 听清 ' + okN + ' / ' + n + ' 句' + (missN ? '（' + missN + ' 句没听出来）' : '');
   if (t.custom) {
-    $('doneSub').textContent = (t.title || '我的短文') + ' · 我的短文 · ' + t.sentences.length + ' 句' + typedInfo;
+    $('doneSub').textContent = (t.title || '我的短文') + ' · 我的短文 · ' + n + ' 句' + info;
   } else {
     dsc = dsc || { title: '', titleZh: '' };
-    $('doneSub').textContent = dsc.titleZh + ' · ' + t.label + ' · ' + dsc.title + '（' + t.sentences.length + ' 句）' + typedInfo;
+    $('doneSub').textContent = dsc.titleZh + ' · ' + t.label + ' · ' + dsc.title + '（' + n + ' 句）' + info;
   }
   var v = '';
   for (var j = 0; j < t.vocab.length; j++) {
@@ -1666,6 +1800,44 @@ $('btnAddCancel').onclick = function () { show('home'); };
 $('btnAddSave').onclick = function () { saveAdd(); };
 $('twiceToggle').onclick = function () { toggleTwice(); };
 $('btnPrev').onclick = function () { prevSentence(); };
+$('btnMarkOk').onclick = function () { markCurrent(1); };
+$('btnMarkMiss').onclick = function () { markCurrent(2); };
+$('btnMode').onclick = function () {
+  state.mode = (state.mode === 'paper') ? 'type' : 'paper';
+  save();
+  applyMode();
+  renderPractice();
+};
+document.addEventListener('keydown', function (e) {
+  var el = e.target || {};
+  var tag = (el.tagName || '').toUpperCase();
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  var prat = $('practice');
+  if (!prat || !prat.classList || !prat.classList.contains('on')) return;
+  var k = e.key;
+  if (k === ' ' || k === 'Spacebar') {
+    e.preventDefault();
+    playCurrent();
+  } else if (k === 'Enter') {
+    e.preventDefault();
+    toggleReveal();
+  } else if (k === '1' && state.mode === 'paper') {
+    e.preventDefault();
+    markCurrent(1);
+  } else if (k === '2' && state.mode === 'paper') {
+    e.preventDefault();
+    markCurrent(2);
+  } else if (k === 'ArrowRight') {
+    e.preventDefault();
+    nextSentence();
+  } else if (k === 'ArrowLeft') {
+    e.preventDefault();
+    prevSentence();
+  } else if (k === 'Escape') {
+    e.preventDefault();
+    backHome();
+  }
+});
 $('btnNextInline').onclick = function () { nextSentence(); };
 $('btnReveal').onclick = function () { toggleReveal(); };
 $('btnNext').onclick = function () { nextSentence(); };
@@ -1691,6 +1863,7 @@ $('btnAgain').onclick = function () {
   state.seen = {};
   state.typed = {};
   state.open = {};
+  if (state.marks) { for (var kk in state.marks) if (kk.indexOf(state.textId + ':') === 0) delete state.marks[kk]; }
   state.done[state.textId] = 1;
   save();
   show('practice');
