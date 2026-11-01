@@ -43,10 +43,19 @@ body{
 }
 .tab.on{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 4px 12px -4px rgba(37,99,235,.5)}
 .leveldesc{color:var(--ink-3);font-size:13px;margin:8px 2px 14px}
-.gchips{display:flex;gap:7px;flex-wrap:wrap;margin:-6px 0 14px}
-.gchip{border:1px solid var(--line);background:#fff;color:var(--ink-2);border-radius:999px;
-  padding:6px 12px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
-.gchip.on{background:var(--blue);border-color:var(--blue);color:#fff}
+/* 每个生活场景单独一栏：小标题 + 卡片 */
+.scsec{margin:0 0 18px;break-inside:avoid;-webkit-column-break-inside:avoid}
+.shead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 2px 8px}
+.shead .sno{color:var(--ink-3);font-size:12.5px;font-weight:700;letter-spacing:.03em}
+.shead b{font-size:16px;color:var(--ink);font-weight:700}
+.shead .sru{color:var(--ink-3);font-size:13px}
+.scsec .card{margin:0}
+@media (min-width:900px){
+  #textlist.two{column-count:2;column-gap:20px}
+}
+@media (min-width:1240px){
+  #textlist.two{column-count:2;column-gap:28px}
+}
 .card{
   background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
   padding:16px;margin-bottom:12px;cursor:pointer;border:1px solid rgba(16,24,40,.04);
@@ -321,7 +330,6 @@ body.paper .typebox{display:none}
     </div>
     <div class="tabs" id="tabs"></div>
     <div class="leveldesc" id="leveldesc"></div>
-    <div class="gchips" id="gchips" style="display:none"></div>
     <div id="textlist"></div>
     <div class="foot" id="homeFoot"></div>
   </div>
@@ -483,7 +491,7 @@ var CONTENT = {"version":6,"kind":"scene-texts","chapters":[{"id":"c1","name":"�
 var STORE = 'diktant.v2';
 var CUSTOM_KEY = 'diktant.custom.v1';
 var SPEEDS = [0.6, 0.75, 0.9, 1, 1.25, 1.5];
-var state = { ch: 'c7', grp: {}, textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {}, custom: [], words: [], mode: 'paper', marks: {} };
+var state = { ch: 'c7', textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {}, custom: [], words: [], mode: 'paper', marks: {} };
 
 function loadCustom() {
   try {
@@ -521,15 +529,14 @@ function load() {
       if (s.pos && typeof s.pos === 'object') state.lastPos = s.pos;
       if (s.mode === 'paper' || s.mode === 'type') state.mode = s.mode;
       if (s.marks && typeof s.marks === 'object') state.marks = s.marks;
-      if (s.grp && typeof s.grp === 'object') state.grp = s.grp;
-    }
+        }
   } catch (e) {}
 }
 function save() {
   try {
     localStorage.setItem(STORE, JSON.stringify({
       ch: state.ch, speed: state.speed, twice: state.twice, typed: state.typed, seen: state.seen, done: state.done,
-      pos: state.lastPos || {}, ui2: 1, mode: state.mode, marks: state.marks || {}, grp: state.grp || {}
+      pos: state.lastPos || {}, ui2: 1, mode: state.mode, marks: state.marks || {}
     }));
   } catch (e) {}
 }
@@ -1009,39 +1016,6 @@ var LEVEL_META = {
 };
 var LEVEL_ORDER_UI = ['A1', 'A1+', 'A2', 'A2+', 'B1', 'B2'];
 function lvDomId(lv) { return 'lv-' + String(lv).replace(/\+/g, 'p'); }
-/* 生活场景章节的二级细分：点一下只看这一小类 */
-var SCENE_GROUPS = {
-  'c1': [
-    { name: '见面与寒暄', ids: ['c1-1', 'c1-2', 'c1-3'] },
-    { name: '感谢、请求与帮忙', ids: ['c1-4', 'c1-5'] },
-    { name: '邀请、意见与情绪', ids: ['c1-6', 'c1-7', 'c1-8'] }
-  ],
-  'c2': [
-    { name: '时间、天气与作息', ids: ['c2-1', 'c2-2', 'c2-4'] },
-    { name: '家与通讯', ids: ['c2-3', 'c2-5'] },
-    { name: '银行与生活服务', ids: ['c2-6', 'c2-7', 'c2-8'] }
-  ],
-  'c3': [
-    { name: '在外吃饭', ids: ['c3-1', 'c3-2', 'c3-3', 'c3-8'] },
-    { name: '买东西', ids: ['c3-4', 'c3-5', 'c3-6', 'c3-7'] }
-  ],
-  'c4': [
-    { name: '市内交通', ids: ['c4-1', 'c4-2', 'c4-3', 'c4-9', 'c4-10', 'c4-11', 'c4-12'] },
-    { name: '长途与飞机', ids: ['c4-4', 'c4-5', 'c4-13', 'c4-14', 'c4-15', 'c4-16'] },
-    { name: '住宿与租房', ids: ['c4-6', 'c4-7', 'c4-18'] },
-    { name: '自驾与旅游', ids: ['c4-8', 'c4-17', 'c4-19', 'c4-20'] }
-  ],
-  'c5': [
-    { name: '校园与课堂', ids: ['c5-5', 'c5-6', 'c5-9', 'c5-10', 'c5-11', 'c5-12'] },
-    { name: '职场', ids: ['c5-1', 'c5-2', 'c5-3', 'c5-4'] },
-    { name: '办事与看病', ids: ['c5-7', 'c5-8'] }
-  ],
-  'c6': [
-    { name: '约见与通讯', ids: ['c6-1', 'c6-2'] },
-    { name: '节日与情感', ids: ['c6-3', 'c6-4', 'c6-5', 'c6-6'] },
-    { name: '紧急与意外', ids: ['c6-7', 'c6-8'] }
-  ]
-};
 function makeSceneCard(sc) {
   var c = document.createElement('div');
   c.className = 'card';
@@ -1085,54 +1059,32 @@ function renderHome() {
     (cnt.texts ? cnt.texts + ' 篇 · ' : '') + cnt.sentences + ' 句 · 音频离线可用';
   var list = $('textlist');
   list.innerHTML = '';
+  list.className = '';
   if (ch.id === 'c7') {
-    renderGroupChips(null);
     renderLevelGroups(list, ch);
   } else {
-    var groups = SCENE_GROUPS[ch.id] || null;
-    var sel = (state.grp && state.grp[ch.id]) || 'all';
-    renderGroupChips(groups, sel);
-    var only = null;
-    if (groups && sel !== 'all') {
-      for (i = 0; i < groups.length; i++) if (groups[i].name === sel) only = groups[i].ids;
-    }
-    for (i = 0; i < ch.scenes.length; i++) {
-      var sc = ch.scenes[i];
-      if (only && only.indexOf(sc.id) < 0) continue;
-      list.appendChild(makeSceneCard(sc));
-    }
+    list.className = 'two';
+    for (i = 0; i < ch.scenes.length; i++) list.appendChild(makeSceneSection(ch.scenes[i]));
   }
   renderCustom();
   renderWords();
   renderDaily();
 }
-/* 生活场景的二级分类按钮：全部 / 小类… */
-function renderGroupChips(groups, sel) {
-  var box = $('gchips');
-  if (!box) return;
-  box.innerHTML = '';
-  if (!groups || !groups.length) { box.style.display = 'none'; return; }
-  box.style.display = '';
-  var i;
-  var all = document.createElement('button');
-  all.className = 'gchip' + (sel === 'all' ? ' on' : '');
-  all.textContent = '全部 ' + totalIn(groups);
-  all.onclick = function () { state.grp[curChapter().id] = 'all'; save(); renderHome(); };
-  box.appendChild(all);
-  for (i = 0; i < groups.length; i++) {
-    (function (g) {
-      var b = document.createElement('button');
-      b.className = 'gchip' + (sel === g.name ? ' on' : '');
-      b.textContent = g.name + ' ' + g.ids.length;
-      b.onclick = function () { state.grp[curChapter().id] = g.name; save(); renderHome(); };
-      box.appendChild(b);
-    })(groups[i]);
-  }
+/* 一个生活场景 = 一小栏：小标题（编号 + 中文名 + 俄语名 + 难度）+ 这张卡 */
+function sceneNo(id) {
+  var m = String(id).match(/^c(\d+)-(\d+)$/);
+  return m ? m[1] + '.' + m[2] : '';
 }
-function totalIn(groups) {
-  var n = 0, i;
-  for (i = 0; i < groups.length; i++) n += groups[i].ids.length;
-  return n;
+function makeSceneSection(sc) {
+  var wrap = document.createElement('div');
+  wrap.className = 'scsec';
+  var head = document.createElement('div');
+  head.className = 'shead';
+  head.innerHTML = '<span class="sno">' + esc(sceneNo(sc.id)) + '</span><b>' + esc(sc.titleZh) + '</b>' +
+    '<span class="sru">' + esc(sc.title) + '</span><span class="lvl">' + esc(sc.level) + '</span>';
+  wrap.appendChild(head);
+  wrap.appendChild(makeSceneCard(sc));
+  return wrap;
 }
 /* 分级短文：按 A1 / A1+ / A2 / A2+ / B1 / B2 分块排列 */
 function renderLevelGroups(list, ch) {
