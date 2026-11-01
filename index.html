@@ -191,6 +191,26 @@ body.paper .typebox{display:none}
 .vrow .vru{font-weight:600;color:var(--ink);flex:0 0 38%}
 .vrow .vzh{flex:1}
 .vrow .vpos{color:var(--ink-3);font-size:12px;flex:0 0 auto}
+/* 短语本：句子/生词旁的星标 + 首页的收藏列表 */
+.star{border:none;background:none;color:#c9cfdc;font-size:18px;line-height:1;padding:0 4px;
+  cursor:pointer;font-family:inherit;flex:0 0 auto;align-self:flex-start}
+.star.on{color:#f59e0b}
+#ruBody .sline .star{margin-left:6px}
+.ptools{display:flex;gap:8px;margin:0 0 10px;flex-wrap:wrap}
+.ptools button{border:1px solid var(--line);background:#fff;color:var(--ink-2);border-radius:999px;
+  padding:6px 12px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
+.ptools button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.pcard{display:flex;gap:10px;align-items:flex-start;background:var(--card);border-radius:12px;
+  box-shadow:var(--shadow);padding:11px 12px;margin-bottom:8px}
+.pcard .pplay{border:none;background:var(--blue-l);color:var(--blue-d);border-radius:999px;
+  width:34px;height:34px;flex:0 0 34px;font-size:14px;cursor:pointer;font-family:inherit}
+.pcard .ptx{flex:1;min-width:0}
+.pcard .pru{font-weight:600;color:var(--ink);font-size:15px;line-height:1.45;word-break:break-word}
+.pcard .pzh{color:var(--ink-2);font-size:13.5px;margin-top:3px;transition:filter .15s}
+.pcard .pzh.blur{filter:blur(5px);cursor:pointer}
+.pcard .psrc{color:var(--ink-3);font-size:12px;margin-top:3px}
+.pcard .pdel{border:none;background:none;color:#c9cfdc;font-size:16px;cursor:pointer;padding:0 2px;font-family:inherit}
+.pempty{color:var(--ink-3);font-size:13.5px;line-height:1.6;padding:10px 2px}
 
 .bottom{
   position:fixed;left:0;right:0;bottom:0;z-index:30;
@@ -305,6 +325,14 @@ body.paper .typebox{display:none}
       <h2>我的短文 <span class="cnt" id="customCnt"></span></h2>
       <button class="addcard" id="btnAdd">＋ 添加短文（粘贴俄语文章，用手机语音朗读）</button>
       <div id="customList"></div>
+    </div>
+    <div class="mine-sec">
+      <h2>我的短语 <span class="cnt" id="phraseCnt"></span></h2>
+      <div class="ptools" id="phraseTools" style="display:none">
+        <button id="btnPhRecite">只显示俄语</button>
+        <button id="btnPhShuffle">打乱顺序</button>
+      </div>
+      <div id="phraseList"></div>
     </div>
     <div class="mine-sec">
       <h2>我的单词 <span class="cnt" id="wordCnt"></span></h2>
@@ -477,8 +505,145 @@ var CONTENT = {"version":6,"kind":"scene-texts","chapters":[{"id":"c1","name":"�
 
 var STORE = 'diktant.v2';
 var CUSTOM_KEY = 'diktant.custom.v1';
+var PHRASE_KEY = 'diktant.phrases.v1';
 var SPEEDS = [0.6, 0.75, 0.9, 1, 1.25, 1.5];
-var state = { ch: 'c7', textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {}, custom: [], words: [], mode: 'paper', marks: {} };
+var state = { ch: 'c7', textId: null, idx: 0, speed: 1, twice: true, seen: {}, typed: {}, done: {}, open: {}, lastPos: {}, custom: [], words: [], phrases: [], phRecite: false, mode: 'paper', marks: {} };
+
+/* ---------------- 短语本：把句子/生词攒起来背诵 ---------------- */
+function loadPhrases() {
+  try {
+    var raw = localStorage.getItem(PHRASE_KEY);
+    var a = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(a)) return [];
+    var out = [];
+    for (var i = 0; i < a.length; i++) {
+      var p = a[i];
+      if (!p || !p.ru) continue;
+      out.push({ ru: String(p.ru), zh: String(p.zh || ''), src: String(p.src || ''),
+        si: (typeof p.si === 'number' ? p.si : -1), kind: p.kind === 'word' ? 'word' : 'sentence',
+        who: String(p.who || '') });
+    }
+    return out;
+  } catch (e) { return []; }
+}
+function savePhrases() {
+  try { localStorage.setItem(PHRASE_KEY, JSON.stringify(state.phrases)); } catch (e) {}
+}
+function phraseKey(ru) { return String(ru || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+function inPhrases(ru) {
+  var k = phraseKey(ru);
+  for (var i = 0; i < state.phrases.length; i++) if (phraseKey(state.phrases[i].ru) === k) return i;
+  return -1;
+}
+function togglePhrase(item) {
+  var i = inPhrases(item.ru);
+  if (i >= 0) state.phrases.splice(i, 1);
+  else state.phrases.unshift(item);
+  savePhrases();
+  renderPhrases();
+  return inPhrases(item.ru) >= 0;
+}
+/* 句子/生词旁的星标按钮 */
+function starBtn(ru, zh, src, si, kind, who) {
+  var b = document.createElement('button');
+  b.className = 'star' + (inPhrases(ru) >= 0 ? ' on' : '');
+  b.textContent = inPhrases(ru) >= 0 ? '★' : '☆';
+  b.setAttribute('aria-label', '收进短语本');
+  b.onclick = function (ev) {
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    var on = togglePhrase({ ru: ru, zh: zh || '', src: src || '', si: (si === null || si === undefined ? -1 : si),
+      kind: kind || 'sentence', who: who || '' });
+    b.className = 'star' + (on ? ' on' : '');
+    b.textContent = on ? '★' : '☆';
+  };
+  return b;
+}
+function phraseSourceName(p) {
+  var r = p.src ? itemOf(p.src) : null;
+  if (!r) return '';
+  var sc = r.sc, t = r.t;
+  if (sc) return sc.titleZh + ' · ' + (t.label || '短文') + (p.kind === 'word' ? ' · 生词' : '');
+  return (t.title || '我的短文') + (p.kind === 'word' ? ' · 生词' : '');
+}
+function playPhrase(p) {
+  var r = p.src ? itemOf(p.src) : null;
+  if (r && r.t && hasAudio(r.t) && p.si >= 0) {
+    playSrc(r.t, p.si, state.speed || 1, null, null);
+    return;
+  }
+  speak(p.ru, 0.85, null, null);
+}
+function renderPhrases() {
+  var box = $('phraseList');
+  if (!box) return;
+  var n = state.phrases.length;
+  if ($('phraseCnt')) $('phraseCnt').textContent = n ? '（' + n + ' 条）' : '';
+  if ($('phraseTools')) $('phraseTools').style.display = n ? '' : 'none';
+  if ($('btnPhRecite')) {
+    $('btnPhRecite').className = state.phRecite ? 'on' : '';
+    $('btnPhRecite').textContent = state.phRecite ? '显示中文' : '只显示俄语';
+  }
+  box.innerHTML = '';
+  if (!n) {
+    var em = document.createElement('div');
+    em.className = 'pempty';
+    em.textContent = '听写时点句子或生词后面的 ☆，就会收进这里，方便以后背诵。';
+    box.appendChild(em);
+    return;
+  }
+  for (var i = 0; i < n; i++) {
+    (function (p) {
+      var c = document.createElement('div');
+      c.className = 'pcard';
+      var play = document.createElement('button');
+      play.className = 'pplay';
+      play.textContent = '▶';
+      play.onclick = function () { playPhrase(p); };
+      var tx = document.createElement('div');
+      tx.className = 'ptx';
+      var ru = document.createElement('div');
+      ru.className = 'pru';
+      ru.textContent = (p.who ? p.who + ' ' : '') + p.ru;
+      tx.appendChild(ru);
+      if (p.zh) {
+        var zh = document.createElement('div');
+        zh.className = 'pzh' + (state.phRecite ? ' blur' : '');
+        zh.textContent = p.zh;
+        zh.onclick = function () {
+          if (zh.className.indexOf('blur') >= 0) zh.className = 'pzh';
+        };
+        tx.appendChild(zh);
+      }
+      var src = document.createElement('div');
+      src.className = 'psrc';
+      src.textContent = phraseSourceName(p);
+      tx.appendChild(src);
+      var del = document.createElement('button');
+      del.className = 'pdel';
+      del.textContent = '✕';
+      del.setAttribute('aria-label', '从短语本移除');
+      del.onclick = function () { togglePhrase(p); };
+      c.appendChild(play);
+      c.appendChild(tx);
+      c.appendChild(del);
+      box.appendChild(c);
+    })(state.phrases[i]);
+  }
+}
+function togglePhRecite() {
+  state.phRecite = !state.phRecite;
+  save();
+  renderPhrases();
+}
+function shufflePhrases() {
+  var a = state.phrases;
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1)), tmp = a[i];
+    a[i] = a[j]; a[j] = tmp;
+  }
+  savePhrases();
+  renderPhrases();
+}
 
 function loadCustom() {
   try {
@@ -500,6 +665,7 @@ function saveCustom() {
 
 function load() {
   state.custom = loadCustom();
+  state.phrases = loadPhrases();
   loadWords();
   loadDailyOffset();
   try {
@@ -516,6 +682,7 @@ function load() {
       if (s.pos && typeof s.pos === 'object') state.lastPos = s.pos;
       if (s.mode === 'paper' || s.mode === 'type') state.mode = s.mode;
       if (s.marks && typeof s.marks === 'object') state.marks = s.marks;
+      if (typeof s.phRecite === 'boolean') state.phRecite = s.phRecite;
         }
   } catch (e) {}
 }
@@ -523,7 +690,7 @@ function save() {
   try {
     localStorage.setItem(STORE, JSON.stringify({
       ch: state.ch, speed: state.speed, twice: state.twice, typed: state.typed, seen: state.seen, done: state.done,
-      pos: state.lastPos || {}, ui2: 1, mode: state.mode, marks: state.marks || {}
+      pos: state.lastPos || {}, ui2: 1, mode: state.mode, marks: state.marks || {}, phRecite: !!state.phRecite
     }));
   } catch (e) {}
 }
@@ -1085,6 +1252,7 @@ function renderHome() {
     renderSceneSections(list, ch);
   }
   renderCustom();
+  renderPhrases();
   renderWords();
   renderDaily();
 }
@@ -1557,6 +1725,7 @@ function renderRu(t) {
     }
     row.appendChild(n);
     row.appendChild(txt);
+    row.appendChild(starBtn(s.ru, s.zh, t.id, i, 'sentence', s.who || ''));
     (function (row2, k) {
       row2.onclick = function () { goto_('', k); };
     })(row, i);
@@ -1611,12 +1780,27 @@ function renderZh(t) {
   $('zhBody').innerHTML = h;
 }
 function renderVocab(t) {
-  var h = '';
+  var box = $('vocabBody');
+  box.innerHTML = '';
   for (var i = 0; i < t.vocab.length; i++) {
     var v = t.vocab[i];
-    h += '<div class="vrow"><div class="vru">' + esc(v.ru) + '</div><div class="vzh">' + esc(v.zh) + '</div><div class="vpos">' + esc(v.pos || '') + '</div></div>';
+    var row = document.createElement('div');
+    row.className = 'vrow';
+    var a = document.createElement('div');
+    a.className = 'vru';
+    a.textContent = v.ru;
+    var b = document.createElement('div');
+    b.className = 'vzh';
+    b.textContent = v.zh;
+    var c = document.createElement('div');
+    c.className = 'vpos';
+    c.textContent = v.pos || '';
+    row.appendChild(a);
+    row.appendChild(b);
+    row.appendChild(c);
+    row.appendChild(starBtn(v.ru, v.zh, t.id, -1, 'word', ''));
+    box.appendChild(row);
   }
-  $('vocabBody').innerHTML = h;
 }
 
 function startPlayback() {
@@ -1885,6 +2069,8 @@ $('btnOnce').onclick = function () { startSeq('once'); };
 $('btnLoop').onclick = function () { startSeq('loop'); };
 $('btnAdd').onclick = function () { openAdd(); };
 $('btnAddWords').onclick = function () { openWords(); };
+$('btnPhRecite').onclick = function () { togglePhRecite(); };
+$('btnPhShuffle').onclick = function () { shufflePhrases(); };
 $('btnWordsBack').onclick = function () { show('home'); };
 $('btnWordsClear').onclick = function () { $('wordsInput').value = ''; $('wordsFoot').textContent = ''; $('wordsInput').focus(); };
 $('btnWordsSave').onclick = function () { saveWordsFromInput(); };
